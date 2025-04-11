@@ -1,6 +1,9 @@
+// layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/components/ui/sonner";
+import ClientSessionWrapper from "@/components/ClientSessionWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,10 +27,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Google Fonts */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ClientSessionWrapper>{children}</ClientSessionWrapper>
+        <Toaster className="toaster" />
       </body>
     </html>
   );
