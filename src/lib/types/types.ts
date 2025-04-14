@@ -3,7 +3,7 @@ export type SentEmail = {
   subject: string
   recipient_emails: string[]
   to?: string[]             
-  attachments: string[]      
+  attachments: File[]      
   sent_at: string           
   created_at: string
   is_sent: boolean
