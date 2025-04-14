@@ -43,7 +43,7 @@ export function SignUpForm() {
     setLoading(true)
 
     try {
-      const response = await fetch( `${process.env.NEXT_PUBLIC_API_URL}/api/accounts`, {
+      const response = await fetch( `${process.env.NEXT_PUBLIC_API_URL}/app/accounts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

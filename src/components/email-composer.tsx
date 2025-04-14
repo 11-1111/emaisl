@@ -14,6 +14,7 @@ import { Paperclip, X, Loader2 } from "lucide-react"
 import type { Merchant } from "@/lib/types/types"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation";
+import { getAccessToken } from "@/lib/auth"
 
 interface EmailComposerProps {
   merchants: Merchant[]
@@ -29,7 +30,7 @@ export default function EmailComposer({ merchants, isLoading }: EmailComposerPro
   const [isSending, setIsSending] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-
+  const token = getAccessToken()
   const router = useRouter();
 
   // useEffect(() => {
@@ -91,10 +92,10 @@ formData.append("recipient_emails", serializedRecipients);
       })
 
 
-      const response = await fetch( `${process.env.NEXT_PUBLIC_API_URL}/api/emails`, {
+      const response = await fetch( `${process.env.NEXT_PUBLIC_API_URL}/app/emails`, {
         method: "POST",
         headers: {
-          // Authorization: `Bearer ${session?.user.accessToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });

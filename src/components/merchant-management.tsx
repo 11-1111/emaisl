@@ -75,7 +75,7 @@ export default function MerchantManagement() {
 
         console.log("Submitting data to API:", payload)
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merchants`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/merchants`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

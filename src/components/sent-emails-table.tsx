@@ -59,7 +59,7 @@ export default function SentEmailsTable({
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     // const baseUrl ="http://localhost:3000";
-    return `${baseUrl}/api/attachments/${attachmentFileName}`;
+    return `${baseUrl}/app/attachments/${attachmentFileName}`;
   };
 
 

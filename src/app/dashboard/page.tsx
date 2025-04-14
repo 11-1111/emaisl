@@ -12,8 +12,9 @@ import { getAccessToken } from "@/lib/auth"
 export default function Home() {
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [sentEmails, setSentEmails] = useState<SentEmail[]>([])
+  const [token, setToken] = useState<string | null>(null)
+
   const router = useRouter()
-  const token = getAccessToken()
 
   const [isLoading, setIsLoading] = useState({
     merchants: true,
@@ -43,25 +44,32 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [router])
 
-  // Fetch data
+  // Get token on client only
   useEffect(() => {
+    const token = getAccessToken()
+    if (!token) {
+      router.push("/")
+    } else {
+      setToken(token)
+    }
+  }, [router])
+
+  // Fetch data only when token is available
+  useEffect(() => {
+    if (!token) return
+
     const fetchMerchants = async () => {
-      console.log("AccessToken for fetching merchants:", token)
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/merchants`,
+          `${process.env.NEXT_PUBLIC_API_URL}/app/merchants`,
           {
-            method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         )
-        console.log("apiiiiiiiiiiiiiiiiiii:" ,response)
         if (!response.ok) {
-          console.log(response)
           if (response.status === 401) {
-            console.log("Session expired based on API response")
             router.push("/")
             return
           }
@@ -82,18 +90,15 @@ export default function Home() {
     const fetchSentEmails = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api/emails?page=${page}&size=${size}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/app/emails?page=${page}&size=${size}`,
           {
-            method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         )
-
         if (!response.ok) {
           if (response.status === 401) {
-            console.log("Session expired based on API response")
             router.push("/")
             return
           }
@@ -141,7 +146,10 @@ export default function Home() {
         </TabsList>
 
         <TabsContent value="compose">
-          <EmailComposer merchants={merchants} isLoading={isLoading.merchants} />
+          <EmailComposer
+            merchants={merchants}
+            isLoading={isLoading.merchants}
+          />
         </TabsContent>
 
         <TabsContent value="sent">

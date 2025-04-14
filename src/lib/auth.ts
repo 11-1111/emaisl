@@ -1,4 +1,5 @@
 export function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null 
   const token = localStorage.getItem("accessToken");
   const expiry = localStorage.getItem("tokenExpiry");
 
