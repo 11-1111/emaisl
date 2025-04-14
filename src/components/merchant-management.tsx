@@ -19,7 +19,6 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Plus, Trash2, UserPlus, Send } from "lucide-react"
 import { addRecipient, deleteMerchant, deleteRecipient } from "@/lib/actions/sendMailAction"
 import { toast } from "sonner"
-import { useSession } from "next-auth/react";
 
 // Types
 type Merchant = {
@@ -42,7 +41,7 @@ export default function MerchantManagement() {
   const [newRecipientEmail, setNewRecipientEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-   const { data: session, status } = useSession();
+
   const handleAddMerchant = () => {
     if (!newMerchantName.trim()) return
     const newId = `m${Date.now()}`
@@ -64,27 +63,28 @@ export default function MerchantManagement() {
 
     setIsSubmitting(true)
 
- 
+
     try {
       for (const merchant of merchants) {
         const recipientEmails = merchant.recipients.map((r) => r.email)
-    
+
         const payload = {
           merchant_name: merchant.name,
           recipient_emails: recipientEmails,
         }
-    
+
         console.log("Submitting data to API:", payload)
-    
-        const response = await fetch( `${process.env.NEXT_PUBLIC_API_URL}/api/merchants`, {
+
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/merchants`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.user.accessToken}`,
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+
           },
           body: JSON.stringify(payload),
         })
-    
+
         if (response.ok) {
           toast(`Merchant "${merchant.name}" submitted successfully`)
         } else {
@@ -106,7 +106,7 @@ export default function MerchantManagement() {
     } finally {
       setIsSubmitting(false)
     }
-    
+
   }
 
   const handleDeleteMerchant = async (id: string) => {

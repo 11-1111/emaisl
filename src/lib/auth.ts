@@ -1,57 +1,15 @@
-// src/lib/auth.ts
-import { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
+export function getAccessToken(): string | null {
+  const token = localStorage.getItem("accessToken");
+  const expiry = localStorage.getItem("tokenExpiry");
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        const { email, password } = credentials as {
-          email: string
-          password: string
-        }
+  if (!token || !expiry) return null;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        })
+  const isExpired = new Date().getTime() > parseInt(expiry);
+  if (isExpired) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("tokenExpiry");
+      return null;
+  }
 
-        const user = await res.json()
-
-        if (res.ok && user) {
-          return user
-        }
-
-        return null
-      },
-    }),
-  ],
-  session: { strategy: "jwt" },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.email = user.email
-        token.accessToken = (user as any).token
-      }
-      return token
-    },
-    async session({ session, token }) {
-      session.user = {
-        id: token.id as string,
-        email: token.email as string,
-        accessToken: token.accessToken as string,
-      }
-      return session
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
+  return token;
 }

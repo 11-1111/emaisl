@@ -13,8 +13,6 @@ import { Badge } from "@/components/ui/badge"
 import { Paperclip, X, Loader2 } from "lucide-react"
 import type { Merchant } from "@/lib/types/types"
 import { toast } from "sonner"
-import { SessionProvider } from "next-auth/react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 interface EmailComposerProps {
@@ -31,17 +29,16 @@ export default function EmailComposer({ merchants, isLoading }: EmailComposerPro
   const [isSending, setIsSending] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { data: session, status } = useSession();
 
   const router = useRouter();
 
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session) {
-      console.log("expired ,,,lets log you out")
-      router.push("/");
-    }
-  }, [session, status, router]);
+  // useEffect(() => {
+  //   if (status === "loading") return;
+  //   if (!session) {
+  //     console.log("expired ,,,lets log you out")
+  //     router.push("/");
+  //   }
+  // }, [session, status, router]);
 
   const handleMerchantChange = (value: string) => {
     setSelectedMerchantId(value)
@@ -97,7 +94,7 @@ formData.append("recipient_emails", serializedRecipients);
       const response = await fetch( `${process.env.NEXT_PUBLIC_API_URL}/api/emails`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session?.user.accessToken}`,
+          // Authorization: `Bearer ${session?.user.accessToken}`,
         },
         body: formData,
       });
