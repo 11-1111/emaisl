@@ -48,11 +48,15 @@ export default function Home() {
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session) {
-      console.log("expired ,,,lets log you out")
+    // if (!session) {
+    //   console.log("expired ,,,lets log you out")
+    //   router.push("/");
+    // }
+    if (!session?.user?.accessToken) {
+      console.error("No access token found. Redirecting...");
       router.push("/");
+      return;
     }
-
 
   try {
     const decoded: { exp: number } = jwtDecode(session?.user.accessToken);
@@ -83,7 +87,14 @@ const [error, setError] = useState({
 
 
 useEffect(() => {
-  if (!session || status === "loading") return;
+  if (status === "loading") return;
+  if (!session?.user?.accessToken) {
+    console.error("No access token found. Redirecting...");
+    router.push("/"); // Redirect if there's no access token
+    return;
+  }
+  
+
 
   const fetchMerchants = async () => {
 

@@ -1,4 +1,4 @@
-
+//login-form.tsx
 "use client"
 
 import { useState } from "react"
@@ -39,8 +39,8 @@ import { toast } from "sonner"
 const formSchema = z.object({
     email: z.string().email({ message: "Please enter a valid email address" }),
     password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-    rememberMe: z.boolean().optional().default(false),
 })
+
 
 
 export function LoginForm() {
@@ -108,7 +108,9 @@ export function LoginForm() {
             password: "",
         },
     })
-
+    
+    
+    
     const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -183,20 +185,6 @@ export function LoginForm() {
                                     </div>
                                 </FormControl>
                                 <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
-                        control={form.control}
-                        name="rememberMe"
-                        render={({ field }) => (
-                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md">
-                                {/* <FormControl>
-                                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                                </FormControl> */}
-                                {/* <div className="space-y-1 leading-none">
-                                    <FormLabel className="text-sm font-normal">Remember me for 30 days</FormLabel>
-                                </div> */}
                             </FormItem>
                         )}
                     />

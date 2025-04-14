@@ -56,12 +56,12 @@ export default function SentEmailsTable({
 
   const getAttachmentUrl = (attachmentFileName: string | undefined) => {
     if (!attachmentFileName) return "";
-  
+
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     // const baseUrl ="http://localhost:3000";
     return `${baseUrl}/api/attachments/${attachmentFileName}`;
   };
-  
+
 
 
   return (
@@ -84,13 +84,13 @@ export default function SentEmailsTable({
             <Table className="px-10">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Merchant</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Recipients</TableHead>
-                  <TableHead>Attachments</TableHead>
-                  <TableHead>Sent At</TableHead>
-                  <TableHead>Created At</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="px-8">Merchant</TableHead>
+                  <TableHead className="px-8">Subject</TableHead>
+                  <TableHead className="px-8">Recipients</TableHead>
+                  <TableHead className="px-8">Attachments</TableHead>
+                  <TableHead className="px-8">Sent At</TableHead>
+                  <TableHead className="px-8">Created At</TableHead>
+                  <TableHead className="px-8">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -123,7 +123,16 @@ export default function SentEmailsTable({
                         <span className="text-muted-foreground">No attachments</span>
                       )}
                     </TableCell>
-                    <TableCell className="px-8 py-6" >{formatDate(email.sent_at)}</TableCell>
+                    <TableCell className="px-8 py-6">
+                      {!email.is_sent && new Date(email.sent_at) < new Date() ? (
+                        "---"
+                      ) : (
+                        formatDate(email.sent_at)
+                      )}
+                    </TableCell>
+
+                    {/* <TableCell className="px-8 py-6" >{formatDate(email.sent_at)}</TableCell> */}
+
                     <TableCell className="px-8 py-6" >{formatDate(email.created_at)}</TableCell>
                     <TableCell className="px-8 py-6" >
                       <span
@@ -155,79 +164,79 @@ export default function SentEmailsTable({
             </PaginationItem>
 
             {(() => {
-  const pageNumbers = [];
-  const maxVisiblePages = 5;
-  const showEllipsis = totalPages > maxVisiblePages;
+              const pageNumbers = [];
+              const maxVisiblePages = 5;
+              const showEllipsis = totalPages > maxVisiblePages;
 
-  let start = Math.max(currentPage - 2, 1);
-  let end = Math.min(start + maxVisiblePages - 1, totalPages);
+              let start = Math.max(currentPage - 2, 1);
+              let end = Math.min(start + maxVisiblePages - 1, totalPages);
 
-  if (end - start < maxVisiblePages - 1) {
-    start = Math.max(end - maxVisiblePages + 1, 1);
-  }
+              if (end - start < maxVisiblePages - 1) {
+                start = Math.max(end - maxVisiblePages + 1, 1);
+              }
 
-  // the first page
-  if (start > 1) {
-    pageNumbers.push(
-      <PaginationItem key={1}>
-        <PaginationLink
-          href="#"
-          isActive={currentPage === 1}
-          onClick={(e) => {
-            e.preventDefault();
-            onPageChange(1);
-          }}
-        >
-          1
-        </PaginationLink>
-      </PaginationItem>
-    );
-    if (start > 2) {
-      pageNumbers.push(<PaginationEllipsis key="start-ellipsis" />);
-    }
-  }
+              // the first page
+              if (start > 1) {
+                pageNumbers.push(
+                  <PaginationItem key={1}>
+                    <PaginationLink
+                      href="#"
+                      isActive={currentPage === 1}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onPageChange(1);
+                      }}
+                    >
+                      1
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+                if (start > 2) {
+                  pageNumbers.push(<PaginationEllipsis key="start-ellipsis" />);
+                }
+              }
 
-  // Show middle pages
-  for (let i = start; i <= end; i++) {
-    pageNumbers.push(
-      <PaginationItem key={i}>
-        <PaginationLink
-          href="#"
-          isActive={currentPage === i}
-          onClick={(e) => {
-            e.preventDefault();
-            onPageChange(i);
-          }}
-        >
-          {i}
-        </PaginationLink>
-      </PaginationItem>
-    );
-  }
+              // Show middle pages
+              for (let i = start; i <= end; i++) {
+                pageNumbers.push(
+                  <PaginationItem key={i}>
+                    <PaginationLink
+                      href="#"
+                      isActive={currentPage === i}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onPageChange(i);
+                      }}
+                    >
+                      {i}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              }
 
-  //the last page
-  if (end < totalPages) {
-    if (end < totalPages - 1) {
-      pageNumbers.push(<PaginationEllipsis key="end-ellipsis" />);
-    }
-    pageNumbers.push(
-      <PaginationItem key={totalPages}>
-        <PaginationLink
-          href="#"
-          isActive={currentPage === totalPages}
-          onClick={(e) => {
-            e.preventDefault();
-            onPageChange(totalPages);
-          }}
-        >
-          {totalPages}
-        </PaginationLink>
-      </PaginationItem>
-    );
-  }
+              //the last page
+              if (end < totalPages) {
+                if (end < totalPages - 1) {
+                  pageNumbers.push(<PaginationEllipsis key="end-ellipsis" />);
+                }
+                pageNumbers.push(
+                  <PaginationItem key={totalPages}>
+                    <PaginationLink
+                      href="#"
+                      isActive={currentPage === totalPages}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onPageChange(totalPages);
+                      }}
+                    >
+                      {totalPages}
+                    </PaginationLink>
+                  </PaginationItem>
+                );
+              }
 
-  return pageNumbers;
-})()}
+              return pageNumbers;
+            })()}
 
 
             <PaginationItem>
