@@ -25,7 +25,12 @@ export default function EmailComposer({ merchants, isLoading }: EmailComposerPro
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>("")
   const [recipients, setRecipients] = useState<string[]>([])
   const [dear, setDear] = useState<string>("")
-  const [subject, setSubject] = useState<string>("Transactions Email for merchant pesapal")
+  const formattedDate = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const [subject, setSubject] = useState(`Your Daily Transaction Statement - ${formattedDate}`);
   const [attachments, setAttachments] = useState<File[]>([])
   const [isSending, setIsSending] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -108,11 +113,13 @@ formData.append("recipient_emails", serializedRecipients);
       const result = await response.json()
 
       toast(result.message || "Email has been sent successfully")
+      
 
       // Reset form
       setDear("")
       setSubject("Transactions attachments for merchant pesapal")
       setAttachments([])
+      router.push("/dashboard?&tab=sent");
     } catch (error) {
       console.error("❗ Error sending email:", error)
       toast(
@@ -211,8 +218,8 @@ formData.append("recipient_emails", serializedRecipients);
               </div>
             )}
             <div className="flex items-center gap-2">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple />
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} type="button">
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} type="button" disabled={attachments.length > 0}>
                 <Paperclip className="h-4 w-4 mr-2" />
                 Attach Files
               </Button>

@@ -136,7 +136,7 @@ export function LoginForm() {
                 </form>
             </Form>
 
-            <div className="text-center text-sm text-muted-foreground">
+            {/* <div className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
                 <Sheet>
                     <SheetTrigger className="underline underline-offset-4 hover:text-primary">
@@ -146,7 +146,7 @@ export function LoginForm() {
                         <SignUpForm />
                     </SheetContent>
                 </Sheet>
-            </div>
+            </div> */}
         </div>
     )
 }

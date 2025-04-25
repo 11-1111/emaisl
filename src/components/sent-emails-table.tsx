@@ -58,9 +58,20 @@ export default function SentEmailsTable({
     if (!attachmentFileName) return "";
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    // const baseUrl ="http://localhost:3000";
-    return `${baseUrl}/app/attachments/${attachmentFileName}`;
+    return `${baseUrl}/app/attachments/${encodeURIComponent(attachmentFileName)}`;
   };
+
+  
+function sanitizeFileName(filename: string) {
+  const ext = filename.substring(filename.lastIndexOf('.'));
+  const base = filename.substring(0, filename.lastIndexOf('.'));
+  const slug = base
+    .toLowerCase()
+    .replace(/[^a-z0-9]/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${slug}-${Date.now()}${ext}`;
+}
 
 
 
@@ -80,50 +91,42 @@ export default function SentEmailsTable({
             No emails have been sent yet.
           </div>
         ) : (
-          <div className="rounded-md border overflow-x-auto">
+          <div className="rounded-md overflow-x-auto">
             <Table className="px-10">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="px-8">Merchant</TableHead>
-                  <TableHead className="px-8">Subject</TableHead>
-                  <TableHead className="px-8">Recipients</TableHead>
-                  <TableHead className="px-8">Attachments</TableHead>
-                  <TableHead className="px-8">Sent At</TableHead>
-                  <TableHead className="px-8">Created At</TableHead>
-                  <TableHead className="px-8">Status</TableHead>
+                  <TableHead className="px-3">Merchant</TableHead>
+                  <TableHead className="px-3">Subject</TableHead>
+                  <TableHead className="px-3">Recipients</TableHead>
+                 
+                  <TableHead className="px-3">Created At</TableHead>
+                  <TableHead className="px-3">Sent At</TableHead> 
+                  <TableHead className="px-3">Status</TableHead>
+                  <TableHead className="px-3 text-right">Attachments</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sentEmails.map((email) => (
                   <TableRow key={email.id}>
-                    <TableCell className="px-4"
+                    <TableCell className="px-3 text-[#000] font-[900]"
 
                     >{email.to}</TableCell>
-                    <TableCell className="px-8 py-6" >{email.subject}</TableCell>
-                    <TableCell className="px-8 py-6" >
+                   <TableCell className="px-3 py-6 whitespace-normal break-words">
+  {email.subject.split(' - ').map((part, idx) => (
+    <span key={idx}>
+      {part}
+      {idx === 0 && <br />} {/* insert <br /> after the first part */}
+    </span>
+  ))}
+</TableCell>
+                    <TableCell className="px-3 py-6" >
                       {email.recipient_emails?.map((recipient, idx) => (
                         <div key={idx}>{recipient.replace(/"/g, "")}</div>
                       ))}
                     </TableCell>
-                    <TableCell className="px-8 py-6" >
-                      {email.attachments && email.attachments.length > 0 ? (
-                        email.attachments.map((file, idx) => (
-                          <a
-                            key={idx}
-                            href={getAttachmentUrl(file)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center space-x-1 text-blue-600 hover:underline"
-                          >
-                            <Download className="w-4 h-4" />
-                            <span>{file}</span>
-                          </a>
-                        ))
-                      ) : (
-                        <span className="text-muted-foreground">No attachments</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="px-8 py-6">
+
+                    <TableCell className="px-3 py-6" >{formatDate(email.created_at)}</TableCell>
+                    <TableCell className="px-3 py-6">
                       {!email.is_sent && new Date(email.sent_at) < new Date() ? (
                         "---"
                       ) : (
@@ -131,20 +134,36 @@ export default function SentEmailsTable({
                       )}
                     </TableCell>
 
-                    {/* <TableCell className="px-8 py-6" >{formatDate(email.sent_at)}</TableCell> */}
+                 
+                    <TableCell className="px-3 py-6">
+  <span
+    className={`inline-block px-3 py-1 text-xs font-medium rounded-full 
+      ${email.is_sent 
+        ? "bg-green-100 text-green-700" 
+        : "bg-yellow-100 text-yellow-700"
+      }`}
+  >
+    {email.is_sent ? "Sent" : "Queued"}
+  </span>
+</TableCell>
+                    <TableCell className="px-10 py-6 flex justify-end items-end text-right">
+  {email.attachments && email.attachments.length > 0 ? (
+    email.attachments.map((file, idx) => (
+      <a
+        key={idx}
+        href={getAttachmentUrl(file)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:underline"
+      >
+        <Download className="w-4 h-4" />
+      </a>
+    ))
+  ) : (
+    <span className="text-muted-foreground">No attachments</span>
+  )}
+</TableCell>
 
-                    <TableCell className="px-8 py-6" >{formatDate(email.created_at)}</TableCell>
-                    <TableCell className="px-8 py-6" >
-                      <span
-                        className={
-                          email.is_sent
-                            ? "text-green-600 font-medium"
-                            : "text-yellow-600 font-medium"
-                        }
-                      >
-                        {email.is_sent ? "Sent" : "Queued"}
-                      </span>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -6,13 +6,17 @@ import EmailComposer from "@/components/email-composer"
 import SentEmailsTable from "@/components/sent-emails-table"
 import MerchantManagement from "@/components/merchant-management"
 import type { Merchant, SentEmail } from "@/lib/types/types"
-import { useRouter } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation";
 import { getAccessToken } from "@/lib/auth"
 
 export default function Home() {
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [sentEmails, setSentEmails] = useState<SentEmail[]>([])
   const [token, setToken] = useState<string | null>(null)
+  // const [tab, setTab] = useState('compose')
+
+  const searchParams = useSearchParams();
+  const tab = searchParams.get("tab") || "compose";
 
   const router = useRouter()
 
@@ -30,6 +34,10 @@ export default function Home() {
   const [size] = useState<number>(5)
   const [totalPages, setTotalPages] = useState<number>(1)
 
+  const handleTabChange = (value: string) => {
+    router.push(`/dashboard?tab=${value}`)
+  }
+  
   // Session expiry check
   useEffect(() => {
     const interval = setInterval(() => {
@@ -118,15 +126,17 @@ export default function Home() {
     }
 
     fetchMerchants()
-    fetchSentEmails()
-  }, [page, size, router, token])
+    // fetchSentEmails()
+    if (tab === "sent") {
+      fetchSentEmails()
+    }
+  }, [page, size, router, token, tab])
 
   return (
-    <main className="container mx-auto py-10 px-4">
-      <div className="flex flex-row w-full justify-between">
+    <main className="container bg-slate-50 mx-auto py-10 px-4">
+      {/* <div className="flex flex-row w-full justify-between">
         <h1 className="text-3xl font-bold mb-8">Email Management System</h1>
-        <MerchantManagement />
-      </div>
+      </div> */}
 
       {(error.merchants || error.sentEmails) && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded mb-6">
@@ -139,13 +149,30 @@ export default function Home() {
         </div>
       )}
 
-      <Tabs defaultValue="compose" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-8">
-          <TabsTrigger value="compose">Compose Email</TabsTrigger>
-          <TabsTrigger value="sent">Sent Emails</TabsTrigger>
-        </TabsList>
+<Tabs value={tab} onValueChange={handleTabChange} className="w-full">
+<TabsList className="rounded-[4px] grid w-[80%] ml-[10%] grid-cols-3 mb-8 bg-white items-center justify-center">
+  <TabsTrigger
+          value="compose"
+          className="rounded-[4px] data-[state=active]:bg-[#2B2B2B] data-[state=active]:text-[#d4d4d4] data-[state=active]:scale-110 data-[state=active]:font-medium data-[state=active]:shadow-sm data-[state=active]:z-10 transition-all duration-300"
+        >
+    Compose Email
+  </TabsTrigger>
+  <TabsTrigger
+    value="sent"
+    className=" rounded-[4px] data-[state=active]:bg-[#2B2B2B] data-[state=active]:text-[#d4d4d4] data-[state=active]:scale-110 data-[state=active]:font-medium data-[state=active]:shadow-sm data-[state=active]:z-10 transition-all duration-300"
+  >
+    Sent Emails
+  </TabsTrigger>
+  <TabsTrigger
+    value="merchant"
+    className="rounded-[4px] data-[state=active]:bg-[#2B2B2B] data-[state=active]:text-[#d4d4d4]  data-[state=active]:scale-110 data-[state=active]:font-medium data-[state=active]:shadow-sm data-[state=active]:z-10 transition-all duration-300"
+  >
+    Merchant Management
+  </TabsTrigger>
+</TabsList>
 
-        <TabsContent value="compose">
+
+        <TabsContent value="compose" className="px-20">
           <EmailComposer
             merchants={merchants}
             isLoading={isLoading.merchants}
@@ -160,6 +187,10 @@ export default function Home() {
             totalPages={totalPages}
             onPageChange={(newPage) => setPage(newPage)}
           />
+        </TabsContent>
+
+        <TabsContent value="merchant" className="px-20">
+        <MerchantManagement/>
         </TabsContent>
       </Tabs>
     </main>

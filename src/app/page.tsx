@@ -12,7 +12,7 @@ export default function LoginPage() {
     <div className="container mx-auto py-10 px-4">
 
       {/* Login Form */}
-      <div className="container relative flex-col items-center justify-center min-h-screen grid lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <div className="container relative flex-col items-start justify-center max-h-screen h-screen grid lg:max-w-none lg:grid-cols-2 lg:px-0">
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
           <div className="absolute inset-0 bg-zinc-900">
           </div>
@@ -48,17 +48,6 @@ export default function LoginPage() {
               <p className="text-sm text-muted-foreground">Enter your credentials to sign in to your account</p>
             </div>
             <LoginForm/>
-            <p className="px-8 text-center text-sm text-muted-foreground">
-              By continuing, you agree to our{" "}
-              <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
-                Terms of Service
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="underline underline-offset-4 hover:text-primary">
-                Privacy Policy
-              </Link>
-              .
-            </p>
           </div>
         </div>
       </div>
