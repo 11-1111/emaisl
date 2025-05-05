@@ -25,10 +25,13 @@ export default function EmailComposer({ merchants, isLoading }: EmailComposerPro
   const [selectedMerchantId, setSelectedMerchantId] = useState<string>("")
   const [recipients, setRecipients] = useState<string[]>([])
   const [dear, setDear] = useState<string>("")
-  const formattedDate = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  const formattedDate = yesterday.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
   const [subject, setSubject] = useState(`Your Daily Transaction Statement - ${formattedDate}`);
   const [attachments, setAttachments] = useState<File[]>([])
