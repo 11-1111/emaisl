@@ -8,7 +8,24 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Edit, Loader2, Plus, Send, Trash2 } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Edit,
+  Loader2,
+  Plus,
+  Send,
+  Trash2,
+  Users,
+  Mail,
+  Calendar,
+  Building2,
+  UserPlus,
+  Search,
+  Filter,
+  AlertTriangle,
+  CheckCircle,
+  X,
+} from "lucide-react"
 import { toast } from "sonner"
 
 // Types
@@ -23,11 +40,13 @@ export default function MerchantManagement() {
   const [merchants, setMerchants] = useState<Merchant[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
 
   // New merchant form
   const [newMerchantName, setNewMerchantName] = useState("")
   const [newRecipientEmail, setNewRecipientEmail] = useState("")
   const [recipientEmails, setRecipientEmails] = useState<string[]>([])
+  const [showAddForm, setShowAddForm] = useState(false)
 
   // Edit merchant form
   const [editMerchantId, setEditMerchantId] = useState<number | null>(null)
@@ -38,7 +57,7 @@ export default function MerchantManagement() {
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Add these state variables after the other state declarations
+  // Delete confirmation state
   const [merchantToDelete, setMerchantToDelete] = useState<number | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteReason, setDeleteReason] = useState("")
@@ -48,6 +67,13 @@ export default function MerchantManagement() {
   useEffect(() => {
     fetchMerchants()
   }, [])
+
+  // Filter merchants based on search term
+  const filteredMerchants = merchants.filter(
+    (merchant) =>
+      merchant.merchant_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      merchant.recipient_emails.some((email) => email.toLowerCase().includes(searchTerm.toLowerCase())),
+  )
 
   // Fetch merchants from API
   const fetchMerchants = async () => {
@@ -86,6 +112,10 @@ export default function MerchantManagement() {
     if (!newRecipientEmail.trim()) return
     if (!newRecipientEmail.includes("@")) {
       toast.error("Please enter a valid email address")
+      return
+    }
+    if (recipientEmails.includes(newRecipientEmail)) {
+      toast.error("Email already added")
       return
     }
 
@@ -132,6 +162,7 @@ export default function MerchantManagement() {
         // Reset form
         setNewMerchantName("")
         setRecipientEmails([])
+        setShowAddForm(false)
         // Refresh merchants list
         fetchMerchants()
       } else {
@@ -146,14 +177,11 @@ export default function MerchantManagement() {
     }
   }
 
-  // Replace the handleDeleteMerchant function with this updated version
   const handleDeleteMerchant = async (id: number) => {
-    // The actual delete operation is now moved to confirmDeleteMerchant
     setMerchantToDelete(id)
     setShowDeleteConfirm(true)
   }
 
-  // Add this new function after handleDeleteMerchant
   const confirmDeleteMerchant = async () => {
     if (!merchantToDelete) return
 
@@ -176,9 +204,7 @@ export default function MerchantManagement() {
 
       if (response.ok) {
         toast.success("Merchant deleted successfully")
-        // Update local state
         setMerchants(merchants.filter((m) => m.id !== merchantToDelete))
-        // Reset delete state
         setShowDeleteConfirm(false)
         setMerchantToDelete(null)
         setDeleteReason("")
@@ -206,6 +232,10 @@ export default function MerchantManagement() {
     if (!editNewEmail.trim()) return
     if (!editNewEmail.includes("@")) {
       toast.error("Please enter a valid email address")
+      return
+    }
+    if (editRecipientEmails.includes(editNewEmail)) {
+      toast.error("Email already added")
       return
     }
 
@@ -249,11 +279,9 @@ export default function MerchantManagement() {
 
       if (response.ok) {
         toast.success("Merchant updated successfully")
-        // Reset form
         setEditMerchantId(null)
         setEditMerchantName("")
         setEditRecipientEmails([])
-        // Refresh merchants list
         fetchMerchants()
       } else {
         const errorData = await response.json()
@@ -267,260 +295,471 @@ export default function MerchantManagement() {
     }
   }
 
+  const getMerchantInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
+  const formatDate = (dateString: string) => {
+    return new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).format(new Date(dateString))
+  }
+
   return (
-    <div className="space-y-6 mb-12">
-      <Card className="border-0 shadow-none bg-slate-50">
-        <CardContent>
-          {/* Add New Merchant Form */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Add New Merchant</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                <div className="grid w-full items-center gap-1.5 mb-6">
-                  <Label htmlFor="merchantName">Merchant Name</Label>
-                  <Input
-                    id="merchantName"
-                    placeholder="Enter merchant name"
-                    value={newMerchantName}
-                    onChange={(e) => setNewMerchantName(e.target.value)}
-                  />
-                </div>
+    <div className="space-y-8">
 
-                <div className="grid w-full items-center gap-1.5 mb-6">
-                  <Label htmlFor="recipientEmail">Recipient Emails</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="recipientEmail"
-                      placeholder="Enter email address"
-                      type="email"
-                      value={newRecipientEmail}
-                      onChange={(e) => setNewRecipientEmail(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault()
-                          handleAddRecipientEmail()
-                        }
-                      }}
-                    />
-                    <Button
-                      onClick={handleAddRecipientEmail}
-                      className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-primary/90"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
 
-                {recipientEmails.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {recipientEmails.map((email, index) => (
-                      <Badge key={index} variant="secondary" className="px-2 py-1">
-                        {email}
-                        <button
-                          className="rounded-[4px] ml-2 text-red-500 hover:text-red-700"
-                          onClick={() => handleRemoveRecipientEmail(email)}
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-indigo-50">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{merchants.length}</p>
+                <p className="text-sm text-gray-600">Total Merchants</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                <div className="flex justify-end">
-                  <Button
-                    onClick={handleSubmitMerchant}
-                    disabled={isSubmitting}
-                    className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-primary/90"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="mr-2 h-4 w-4" />
-                        Add Merchant
-                      </>
-                    )}
-                  </Button>
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-green-50 to-emerald-50">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                <Mail className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {merchants.reduce((total, merchant) => total + merchant.recipient_emails.length, 0)}
+                </p>
+                <p className="text-sm text-gray-600">Total Recipients</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-violet-50">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                <Calendar className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {
+                    merchants.filter((m) => new Date(m.created_at) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+                      .length
+                  }
+                </p>
+                <p className="text-sm text-gray-600">Added This Week</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Action Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search merchants or emails..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-white/70 border-gray-200/50 focus:border-[#16659e] focus:ring-[#16659e]/20 rounded-xl"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="gap-2 rounded-xl border-gray-200 hover:bg-gray-50"
+          >
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Filter className="h-4 w-4" />}
+            Refresh
+          </Button>
+
+          <Button
+            onClick={() => setShowAddForm(true)}
+            className="gap-2 bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#1e7bb8] hover:to-[#16659e] text-white rounded-xl shadow-lg shadow-[#16659e]/25 hover:shadow-xl hover:shadow-[#16659e]/30 hover:scale-[1.02] transition-all duration-300"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add Merchant
+          </Button>
+        </div>
+      </div>
+
+      {/* Add Merchant Dialog */}
+      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-[#16659e]" />
+              Add New Merchant
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="merchantName" className="text-sm font-medium">
+                Merchant Name
+              </Label>
+              <Input
+                id="merchantName"
+                placeholder="Enter merchant name"
+                value={newMerchantName}
+                onChange={(e) => setNewMerchantName(e.target.value)}
+                className="rounded-xl border-gray-200/50 focus:border-[#16659e] focus:ring-[#16659e]/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recipientEmail" className="text-sm font-medium">
+                Recipient Emails
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  id="recipientEmail"
+                  placeholder="Enter email address"
+                  type="email"
+                  value={newRecipientEmail}
+                  onChange={(e) => setNewRecipientEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault()
+                      handleAddRecipientEmail()
+                    }
+                  }}
+                  className="rounded-xl border-gray-200/50 focus:border-[#16659e] focus:ring-[#16659e]/20"
+                />
+                <Button
+                  onClick={handleAddRecipientEmail}
+                  size="icon"
+                  className="rounded-xl bg-[#16659e] hover:bg-[#1e7bb8]"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {recipientEmails.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Added Recipients</Label>
+                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200/50">
+                  {recipientEmails.map((email, index) => (
+                    <Badge key={index} variant="secondary" className="px-3 py-1 rounded-lg">
+                      {email}
+                      <button
+                        className="ml-2 text-red-500 hover:text-red-700 transition-colors"
+                        onClick={() => handleRemoveRecipientEmail(email)}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Merchants Table */}
-          <Card className="">
-            <CardHeader className="">
-              <CardTitle className="text-lg">Existing Merchants</CardTitle>
-            </CardHeader>
-            <CardContent className="">
-              {loading ? (
-                <div className="flex justify-center items-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : merchants.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No merchants found. Add your first merchant above.
-                </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddForm(false)
+                setNewMerchantName("")
+                setRecipientEmails([])
+                setNewRecipientEmail("")
+              }}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitMerchant}
+              disabled={isSubmitting}
+              className="rounded-xl bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#1e7bb8] hover:to-[#16659e]"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
               ) : (
-                <div className="">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>ID</TableHead>
-                        <TableHead>Merchant Name</TableHead>
-                        <TableHead>Recipients</TableHead>
-                        <TableHead>Created At</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {merchants.map((merchant) => (
-                        <TableRow key={merchant.id}>
-                          <TableCell>{merchant.id}</TableCell>
-                          <TableCell className="font-medium">{merchant.merchant_name}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-wrap gap-1">
-                              {merchant.recipient_emails.map((email, index) => (
-                                <Badge key={index} variant="outline" className="px-2 py-0.5">
-                                  {email}
-                                </Badge>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(merchant.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end space-x-2">
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditMerchant(merchant)}
-                                    className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-accent"
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>Edit Merchant</DialogTitle>
-                                  </DialogHeader>
-                                  <div className="space-y-4 py-4">
-                                    <div className="grid w-full items-center gap-1.5">
-                                      <Label htmlFor="editMerchantName">Merchant Name</Label>
-                                      <Input
-                                        id="editMerchantName"
-                                        placeholder="Enter merchant name"
-                                        value={editMerchantName}
-                                        onChange={(e) => setEditMerchantName(e.target.value)}
-                                      />
-                                    </div>
-
-                                    <div className="grid w-full items-center gap-1.5">
-                                      <Label htmlFor="editRecipientEmail">Recipient Emails</Label>
-                                      <div className="flex gap-2">
-                                        <Input
-                                          id="editRecipientEmail"
-                                          placeholder="Enter email address"
-                                          type="email"
-                                          value={editNewEmail}
-                                          onChange={(e) => setEditNewEmail(e.target.value)}
-                                          onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                              e.preventDefault()
-                                              handleAddEditEmail()
-                                            }
-                                          }}
-                                        />
-                                        <Button
-                                          onClick={handleAddEditEmail}
-                                          className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-primary/90"
-                                        >
-                                          <Plus className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    </div>
-
-                                    {editRecipientEmails.length > 0 && (
-                                      <div className="flex flex-wrap gap-2 mt-2">
-                                        {editRecipientEmails.map((email, index) => (
-                                          <Badge key={index} variant="secondary" className="px-2 py-1">
-                                            {email}
-                                            <button
-                                              className="rounded-[4px] ml-2 text-red-500 hover:text-red-700"
-                                              onClick={() => handleRemoveEditEmail(email)}
-                                            >
-                                              ×
-                                            </button>
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <DialogFooter>
-                                    <Button
-                                      onClick={handleUpdateMerchant}
-                                      disabled={isSubmitting}
-                                      className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-primary/90"
-                                    >
-                                      {isSubmitting ? "Updating..." : "Update Merchant"}
-                                    </Button>
-                                  </DialogFooter>
-                                </DialogContent>
-                              </Dialog>
-
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteMerchant(merchant.id)}
-                                className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-accent/80"
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Add Merchant
+                </>
               )}
-            </CardContent>
-          </Card>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Merchants Table */}
+      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden">
+        <CardHeader className="bg-gray-50/80 border-b border-gray-200/50">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Building2 className="h-5 w-5 text-[#16659e]" />
+            Merchants ({filteredMerchants.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <Loader2 className="h-12 w-12 animate-spin text-[#16659e]" />
+              <p className="text-gray-600 font-medium">Loading merchants...</p>
+            </div>
+          ) : filteredMerchants.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 space-y-4">
+              <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center">
+                <Users className="w-10 h-10 text-gray-400" />
+              </div>
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {searchTerm ? "No merchants found" : "No merchants yet"}
+                </h3>
+                <p className="text-gray-500 mt-1">
+                  {searchTerm ? "Try adjusting your search terms" : "Add your first merchant to get started"}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-gray-50/50">
+                  <TableRow className="border-b border-gray-200/50">
+                    <TableHead className="px-6 py-4 font-semibold text-gray-900">Merchant</TableHead>
+                    <TableHead className="px-6 py-4 font-semibold text-gray-900">Recipients</TableHead>
+                    <TableHead className="px-6 py-4 font-semibold text-gray-900">Created</TableHead>
+                    <TableHead className="px-6 py-4 text-right font-semibold text-gray-900">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredMerchants.map((merchant) => (
+                    <TableRow
+                      key={merchant.id}
+                      className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors"
+                    >
+                      <TableCell className="px-6 py-4">
+                        <div className="flex items-center space-x-4">
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage
+                              src={`/placeholder.svg?height=48&width=48&query=${getMerchantInitials(merchant.merchant_name)}`}
+                              alt={merchant.merchant_name}
+                            />
+                            <AvatarFallback className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white font-medium">
+                              {getMerchantInitials(merchant.merchant_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-semibold text-gray-900">{merchant.merchant_name}</p>
+                            <p className="text-sm text-gray-500">ID: {merchant.id}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-700">
+                              {merchant.recipient_emails.length} recipient
+                              {merchant.recipient_emails.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {merchant.recipient_emails.slice(0, 2).map((email, index) => (
+                              <Badge key={index} variant="outline" className="text-xs rounded-lg">
+                                {email}
+                              </Badge>
+                            ))}
+                            {merchant.recipient_emails.length > 2 && (
+                              <Badge variant="secondary" className="text-xs rounded-lg">
+                                +{merchant.recipient_emails.length - 2} more
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm text-gray-600">{formatDate(merchant.created_at)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
+                        <div className="flex justify-end space-x-2">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditMerchant(merchant)}
+                                className="rounded-xl border-gray-200 hover:bg-gray-50 hover:border-[#16659e] transition-all duration-200"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2">
+                                  <Edit className="h-5 w-5 text-[#16659e]" />
+                                  Edit Merchant
+                                </DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-6 py-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="editMerchantName" className="text-sm font-medium">
+                                    Merchant Name
+                                  </Label>
+                                  <Input
+                                    id="editMerchantName"
+                                    placeholder="Enter merchant name"
+                                    value={editMerchantName}
+                                    onChange={(e) => setEditMerchantName(e.target.value)}
+                                    className="rounded-xl border-gray-200/50 focus:border-[#16659e] focus:ring-[#16659e]/20"
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label htmlFor="editRecipientEmail" className="text-sm font-medium">
+                                    Recipient Emails
+                                  </Label>
+                                  <div className="flex gap-2">
+                                    <Input
+                                      id="editRecipientEmail"
+                                      placeholder="Enter email address"
+                                      type="email"
+                                      value={editNewEmail}
+                                      onChange={(e) => setEditNewEmail(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault()
+                                          handleAddEditEmail()
+                                        }
+                                      }}
+                                      className="rounded-xl border-gray-200/50 focus:border-[#16659e] focus:ring-[#16659e]/20"
+                                    />
+                                    <Button
+                                      onClick={handleAddEditEmail}
+                                      size="icon"
+                                      className="rounded-xl bg-[#16659e] hover:bg-[#1e7bb8]"
+                                    >
+                                      <Plus className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {editRecipientEmails.length > 0 && (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Current Recipients</Label>
+                                    <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-xl border border-gray-200/50">
+                                      {editRecipientEmails.map((email, index) => (
+                                        <Badge key={index} variant="secondary" className="px-3 py-1 rounded-lg">
+                                          {email}
+                                          <button
+                                            className="ml-2 text-red-500 hover:text-red-700 transition-colors"
+                                            onClick={() => handleRemoveEditEmail(email)}
+                                          >
+                                            <X className="h-3 w-3" />
+                                          </button>
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <DialogFooter className="gap-2">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => setEditMerchantId(null)}
+                                  className="rounded-xl"
+                                >
+                                  Cancel
+                                </Button>
+                                <Button
+                                  onClick={handleUpdateMerchant}
+                                  disabled={isSubmitting}
+                                  className="rounded-xl bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#1e7bb8] hover:to-[#16659e]"
+                                >
+                                  {isSubmitting ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Updating...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Update Merchant
+                                    </>
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteMerchant(merchant.id)}
+                            className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
+
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-red-500">Confirm Deletion</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Confirm Deletion
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium">
-                Are you sure you want to delete this merchant? This action cannot be undone.
+            <div className="p-4 bg-red-50 rounded-xl border border-red-200">
+              <p className="text-sm font-medium text-red-800">Are you sure you want to delete this merchant?</p>
+              <p className="text-sm text-red-700 mt-1">
+                This action cannot be undone and will remove all associated data.
               </p>
-              <p className="text-sm text-muted-foreground">
-                For accountability purposes, please provide a reason for deletion:
-              </p>
-              <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="deleteReason">Reason for deletion</Label>
-                <Input
-                  id="deleteReason"
-                  placeholder="Enter reason for deletion"
-                  value={deleteReason}
-                  onChange={(e) => setDeleteReason(e.target.value)}
-                  className="col-span-3"
-                />
-              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="deleteReason" className="text-sm font-medium">
+                Reason for deletion <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="deleteReason"
+                placeholder="Enter reason for deletion"
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="rounded-xl border-gray-200/50 focus:border-red-300 focus:ring-red-200"
+              />
             </div>
           </div>
-          <DialogFooter className="sm:justify-between">
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
               onClick={() => {
@@ -528,15 +767,15 @@ export default function MerchantManagement() {
                 setMerchantToDelete(null)
                 setDeleteReason("")
               }}
-              className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-accent"
+              className="rounded-xl"
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={confirmDeleteMerchant}
-              disabled={deletingMerchant}
-              className="rounded-[4px] transition-all duration-200 hover:scale-105 hover:bg-destructive/90"
+              disabled={deletingMerchant || !deleteReason.trim()}
+              className="rounded-xl bg-red-600 hover:bg-red-700"
             >
               {deletingMerchant ? (
                 <>
@@ -544,7 +783,10 @@ export default function MerchantManagement() {
                   Deleting...
                 </>
               ) : (
-                "Delete Merchant"
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Merchant
+                </>
               )}
             </Button>
           </DialogFooter>

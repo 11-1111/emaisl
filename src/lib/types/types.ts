@@ -1,12 +1,14 @@
 export type SentEmail = {
   id: number
+  user:string
   subject: string
   recipient_emails: string[]
   to?: string[]             
   attachments: string[]      
   sent_at: string           
   created_at: string
-  is_sent: boolean
+   is_sent: boolean
+   blocked: boolean
   merchant?: string        
   attachmentUrl?: string    
 }
