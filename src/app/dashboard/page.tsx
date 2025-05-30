@@ -37,8 +37,13 @@ export default function Home() {
   const [token, setToken] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
-  const userName = localStorage.getItem("userName")
-  const userEmail = localStorage.getItem("userEmail")
+const [userName, setUserName] = useState<string | null>(null)
+const [userEmail, setUserEmail] = useState<string | null>(null)
+
+useEffect(() => {
+  setUserName(localStorage.getItem("userName"))
+  setUserEmail(localStorage.getItem("userEmail"))
+}, [])
 
   const searchParams = useSearchParams()
   const tab = searchParams.get("tab") || "compose"
