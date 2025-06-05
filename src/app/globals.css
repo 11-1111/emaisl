@@ -9,9 +9,6 @@ body {
   font-family: "Manrope", sans-serif;
   background-color:#f8fafc;
 }
-.toaster {
-  font-family: "Manrope", sans-serif;
-}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

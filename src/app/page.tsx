@@ -8,45 +8,21 @@ export default function LoginPage() {
   const [systemStats, setSystemStats] = useState({
     totalEmails: 0,
     totalMerchants: 0,
-    queuedEmails: 0,
     isLoading: true,
   })
 
   useEffect(() => {
     const fetchSystemStats = async () => {
       try {
-        // Fetch emails data
-        const emailsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/emails?page=1&size=1`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
+        // Fetch summary data
+        const summaryResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/summary`)
+        const summaryData = await summaryResponse.json()
+        console.log("emilsData:", summaryData.meta)
 
-        )
-        const emailsData = await emailsResponse.json()
-        console.log("emilsData:", emailsData.meta)
-
-        // Fetch merchants data
-        const merchantsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/merchants`
-          , {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-            },
-          }
-
-        )
-        const merchantsData = await merchantsResponse.json()
-
-        // Calculate queued emails (not sent and not blocked)
-        const allEmailsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/emails?page=1&size=1000`)
-        const allEmailsData = await allEmailsResponse.json()
-        const queuedCount = allEmailsData.data?.filter((email: any) => !email.is_sent && !email.blocked).length || 0
 
         setSystemStats({
-          totalEmails: emailsData.meta?.total || 0,
-          totalMerchants: Array.isArray(merchantsData) ? merchantsData.length : 0,
-          queuedEmails: queuedCount,
+          totalEmails: summaryData.totalEmails || 0,
+          totalMerchants: summaryData.totalMerchants || 0,
           isLoading: false,
         })
       } catch (error) {
@@ -54,7 +30,6 @@ export default function LoginPage() {
         setSystemStats({
           totalEmails: 0,
           totalMerchants: 0,
-          queuedEmails: 0,
           isLoading: false,
         })
       }
@@ -178,9 +153,9 @@ export default function LoginPage() {
               <LoginForm />
 
               {/* System Info */}
-          
+
             </div>
-         
+
           </div>
         </div>
       </div>

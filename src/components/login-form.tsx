@@ -45,7 +45,10 @@ const onSubmit = async (values: z.infer<typeof formSchema>) => {
     const data = await response.json();
 
     if (!response.ok) {
-      toast.error(data.message || "Authentication failed");
+      // toast.error(data.message || "Authentication failed");
+      toast.error('Incorrect password', {
+  className: 'bg-red-900 text-white',
+});
       return;
     }
 
