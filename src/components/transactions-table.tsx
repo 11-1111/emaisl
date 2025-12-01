@@ -1,19 +1,29 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCw, Search, FileSpreadsheet, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import {
+  RefreshCw,
+  Search,
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Filter,
+  X,
+  ChevronDown,
+} from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { getAccessToken } from "@/lib/auth"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 
 interface Transaction {
   id: number
@@ -47,10 +57,40 @@ interface ApiResponse {
   meta: PaginationMeta
 }
 
+interface FilterState {
+  date: string
+  paymentMethod: string
+  confirmationCode: string
+  currency: string
+  minAmount: string
+  maxAmount: string
+  buyerName: string
+  recordType: string
+  originalName: string
+  reference: string
+  description: string
+}
+
+const initialFilterState: FilterState = {
+  date: "",
+  paymentMethod: "",
+  confirmationCode: "",
+  currency: "",
+  minAmount: "",
+  maxAmount: "",
+  buyerName: "",
+  recordType: "",
+  originalName: "",
+  reference: "",
+  description: "",
+}
+
 export default function TransactionsTable() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [filters, setFilters] = useState<FilterState>(initialFilterState)
+  const [appliedFilters, setAppliedFilters] = useState<FilterState>(initialFilterState)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(25)
   const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
@@ -60,61 +100,89 @@ export default function TransactionsTable() {
     totalPages: 1,
   })
 
-  const fetchTransactions = async (page: number = currentPage, size: number = pageSize) => {
-    setIsLoading(true)
-    try {
-      const token = getAccessToken()
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/app/emails/transactions?page=${page}&size=${size}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
+  const fetchTransactions = useCallback(
+    async (page: number = currentPage, size: number = pageSize, filterParams: FilterState = appliedFilters) => {
+      setIsLoading(true)
+      try {
+        const token = getAccessToken()
+
+        // Build query parameters
+        const params = new URLSearchParams()
+        params.append("page", page.toString())
+        params.append("size", size.toString())
+
+        // Add filter parameters if they have values
+        if (filterParams.date) params.append("date", filterParams.date)
+        if (filterParams.paymentMethod) params.append("paymentMethod", filterParams.paymentMethod)
+        if (filterParams.confirmationCode) params.append("confirmationCode", filterParams.confirmationCode)
+        if (filterParams.currency) params.append("currency", filterParams.currency)
+        if (filterParams.minAmount) params.append("minAmount", filterParams.minAmount)
+        if (filterParams.maxAmount) params.append("maxAmount", filterParams.maxAmount)
+        if (filterParams.buyerName) params.append("buyerName", filterParams.buyerName)
+        if (filterParams.recordType) params.append("recordType", filterParams.recordType)
+        if (filterParams.originalName) params.append("originalName", filterParams.originalName)
+        if (filterParams.reference) params.append("reference", filterParams.reference)
+        if (filterParams.description) params.append("description", filterParams.description)
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/app/emails/transactions?${params.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
+        )
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch transactions")
         }
-      )
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch transactions")
+        const apiResponse: ApiResponse = await response.json()
+        setTransactions(apiResponse.data)
+        setPaginationMeta(apiResponse.meta)
+        setCurrentPage(apiResponse.meta.page)
+      } catch (error) {
+        console.error("Error fetching transactions:", error)
+      } finally {
+        setIsLoading(false)
       }
-
-      const apiResponse: ApiResponse = await response.json()
-      setTransactions(apiResponse.data)
-      setPaginationMeta(apiResponse.meta)
-      setCurrentPage(apiResponse.meta.page)
-    } catch (error) {
-      console.error("Error fetching transactions:", error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    },
+    [currentPage, pageSize, appliedFilters],
+  )
 
   useEffect(() => {
-    fetchTransactions()
-  }, [])
+    fetchTransactions(1, pageSize, appliedFilters)
+  }, [appliedFilters])
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= paginationMeta.totalPages) {
       setCurrentPage(newPage)
-      fetchTransactions(newPage, pageSize)
+      fetchTransactions(newPage, pageSize, appliedFilters)
     }
   }
 
   const handlePageSizeChange = (newSize: number) => {
     setPageSize(newSize)
     setCurrentPage(1)
-    fetchTransactions(1, newSize)
+    fetchTransactions(1, newSize, appliedFilters)
   }
 
-  const filteredTransactions = transactions.filter((transaction) => {
-    const query = searchQuery.toLowerCase()
-    return (
-      transaction.confirmationCode.toLowerCase().includes(query) ||
-      transaction.reference.toLowerCase().includes(query) ||
-      transaction.description.toLowerCase().includes(query) ||
-      transaction.paymentMethod.toLowerCase().includes(query) ||
-      transaction.paymentCardNumber.toLowerCase().includes(query)
-    )
-  })
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const handleApplyFilters = () => {
+    setCurrentPage(1)
+    setAppliedFilters(filters)
+  }
+
+  const handleClearFilters = () => {
+    setFilters(initialFilterState)
+    setAppliedFilters(initialFilterState)
+    setCurrentPage(1)
+  }
+
+  const activeFilterCount = Object.values(appliedFilters).filter((v) => v !== "").length
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
@@ -127,8 +195,8 @@ export default function TransactionsTable() {
   const getPaginationRange = () => {
     const delta = 2
     const range = []
-    const rangeWithDots = []
-    let l
+    const rangeWithDots: (string | number)[] = []
+    let l: number
 
     for (let i = 1; i <= paginationMeta.totalPages; i++) {
       if (i === 1 || i === paginationMeta.totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
@@ -164,23 +232,257 @@ export default function TransactionsTable() {
               <CardDescription>View and search transaction records from Excel uploads</CardDescription>
             </div>
           </div>
-          <Button onClick={() => fetchTransactions()} disabled={isLoading} size="sm" className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+          <Button
+            onClick={() => fetchTransactions(currentPage, pageSize, appliedFilters)}
+            disabled={isLoading}
+            size="sm"
+            className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+          >
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
       </CardHeader>
-
       <CardContent className="p-6">
-        <div className="mb-4 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-          <Input
-            placeholder="Search by confirmation code, reference, description, payment method..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-white border-gray-200"
-          />
-        </div>
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="gap-2 bg-transparent">
+                <Filter className="w-4 h-4" />
+                Filters
+                {activeFilterCount > 0 && <Badge className="ml-1 bg-emerald-500 text-white">{activeFilterCount}</Badge>}
+                <ChevronDown className={`w-4 h-4 transition-transform ${isFiltersOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4 mr-1" />
+                Clear all
+              </Button>
+            )}
+          </div>
+
+          <CollapsibleContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg border">
+              {/* Text search filters */}
+              <div className="space-y-2">
+                <Label htmlFor="filter-date" className="text-xs font-medium text-gray-600">
+                  Date
+                </Label>
+                <Input
+                  id="filter-date"
+                  placeholder="Search date..."
+                  value={filters.date}
+                  onChange={(e) => handleFilterChange("date", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-buyerName" className="text-xs font-medium text-gray-600">
+                  Buyer Name
+                </Label>
+                <Input
+                  id="filter-buyerName"
+                  placeholder="Search buyer..."
+                  value={filters.buyerName}
+                  onChange={(e) => handleFilterChange("buyerName", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-paymentMethod" className="text-xs font-medium text-gray-600">
+                  Payment Method
+                </Label>
+                <Input
+                  id="filter-paymentMethod"
+                  placeholder="Search method..."
+                  value={filters.paymentMethod}
+                  onChange={(e) => handleFilterChange("paymentMethod", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-confirmationCode" className="text-xs font-medium text-gray-600">
+                  Confirmation Code
+                </Label>
+                <Input
+                  id="filter-confirmationCode"
+                  placeholder="Search code..."
+                  value={filters.confirmationCode}
+                  onChange={(e) => handleFilterChange("confirmationCode", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-currency" className="text-xs font-medium text-gray-600">
+                  Currency (exact)
+                </Label>
+                <Input
+                  id="filter-currency"
+                  placeholder="e.g. USD"
+                  value={filters.currency}
+                  onChange={(e) => handleFilterChange("currency", e.target.value.toUpperCase())}
+                  className="h-9 text-sm"
+                  maxLength={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-originalName" className="text-xs font-medium text-gray-600">
+                  Original Name
+                </Label>
+                <Input
+                  id="filter-originalName"
+                  placeholder="Search file name..."
+                  value={filters.originalName}
+                  onChange={(e) => handleFilterChange("originalName", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-reference" className="text-xs font-medium text-gray-600">
+                  Reference
+                </Label>
+                <Input
+                  id="filter-reference"
+                  placeholder="Search reference..."
+                  value={filters.reference}
+                  onChange={(e) => handleFilterChange("reference", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-description" className="text-xs font-medium text-gray-600">
+                  Description
+                </Label>
+                <Input
+                  id="filter-description"
+                  placeholder="Search description..."
+                  value={filters.description}
+                  onChange={(e) => handleFilterChange("description", e.target.value)}
+                  className="h-9 text-sm"
+                />
+              </div>
+
+              {/* Amount range filters */}
+              <div className="space-y-2">
+                <Label htmlFor="filter-minAmount" className="text-xs font-medium text-gray-600">
+                  Min Amount
+                </Label>
+                <Input
+                  id="filter-minAmount"
+                  type="number"
+                  placeholder="0.00"
+                  value={filters.minAmount}
+                  onChange={(e) => handleFilterChange("minAmount", e.target.value)}
+                  className="h-9 text-sm"
+                  min={0}
+                  step="0.01"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="filter-maxAmount" className="text-xs font-medium text-gray-600">
+                  Max Amount
+                </Label>
+                <Input
+                  id="filter-maxAmount"
+                  type="number"
+                  placeholder="0.00"
+                  value={filters.maxAmount}
+                  onChange={(e) => handleFilterChange("maxAmount", e.target.value)}
+                  className="h-9 text-sm"
+                  min={0}
+                  step="0.01"
+                />
+              </div>
+
+              {/* Record type select */}
+              <div className="space-y-2">
+                <Label htmlFor="filter-recordType" className="text-xs font-medium text-gray-600">
+                  Record Type
+                </Label>
+                <Select
+                  value={filters.recordType}
+                  onValueChange={(value) => handleFilterChange("recordType", value === "all" ? "" : value)}
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="DATA">DATA</SelectItem>
+                    <SelectItem value="SUMMARY">SUMMARY</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Apply button */}
+              <div className="flex items-end">
+                <Button
+                  onClick={handleApplyFilters}
+                  className="w-full h-9 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600"
+                >
+                  <Search className="w-4 h-4 mr-2" />
+                  Apply Filters
+                </Button>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Active filters display */}
+        {activeFilterCount > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {Object.entries(appliedFilters).map(([key, value]) => {
+              if (!value) return null
+              const labelMap: Record<string, string> = {
+                date: "Date",
+                paymentMethod: "Payment Method",
+                confirmationCode: "Confirmation Code",
+                currency: "Currency",
+                minAmount: "Min Amount",
+                maxAmount: "Max Amount",
+                buyerName: "Buyer Name",
+                recordType: "Record Type",
+                originalName: "Original Name",
+                reference: "Reference",
+                description: "Description",
+              }
+              return (
+                <Badge
+                  key={key}
+                  variant="secondary"
+                  className="gap-1 pl-2 pr-1 py-1 bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+                >
+                  <span className="text-xs font-medium">{labelMap[key]}:</span>
+                  <span className="text-xs">{value}</span>
+                  <button
+                    onClick={() => {
+                      const newFilters = { ...appliedFilters, [key]: "" }
+                      setFilters(newFilters)
+                      setAppliedFilters(newFilters)
+                    }}
+                    className="ml-1 p-0.5 hover:bg-emerald-300 rounded"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              )
+            })}
+          </div>
+        )}
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -195,30 +497,55 @@ export default function TransactionsTable() {
               <Table className="excel-table">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50 hover:bg-slate-100">
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[60px]">originalName</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Date</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px]">Payment Method</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Confirmation Code</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[80px]">Currency</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px] text-right">Amount</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px] text-right">Commission</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px] text-right">Net Amount</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Card Number</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[180px]">Reference</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[200px]">Description</TableHead>
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Processed At</TableHead>
-                   
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[60px]">
+                      originalName
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">
+                      Date
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px]">
+                      Payment Method
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">
+                      Confirmation Code
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[80px]">
+                      Currency
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px] text-right">
+                      Amount
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px] text-right">
+                      Commission
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px] text-right">
+                      Net Amount
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">
+                      Card Number
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[180px]">
+                      Reference
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[200px]">
+                      Description
+                    </TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">
+                      Processed At
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions.length === 0 ? (
+                  {transactions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={13} className="text-center py-8 text-gray-500">
-                        {searchQuery ? "No transactions found matching your search." : "No transactions available."}
+                        {activeFilterCount > 0
+                          ? "No transactions found matching your filters."
+                          : "No transactions available."}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredTransactions.map((transaction, index) => (
+                    transactions.map((transaction, index) => (
                       <TableRow
                         key={transaction.id}
                         className={`hover:bg-emerald-50/50 transition-colors ${
@@ -226,23 +553,23 @@ export default function TransactionsTable() {
                         }`}
                       >
                         <TableCell className="font-mono text-xs border-r border-slate-200 max-w-[150px] truncate overflow-hidden text-ellipsis">
-                               <Tooltip>
-      <TooltipTrigger asChild>
-        <span> {transaction.originalName}</span>
-        
-      </TooltipTrigger>
-      <TooltipContent className="py-4">
-         {transaction.originalName}
-      </TooltipContent>
-    </Tooltip>
-
- 
-</TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span> {transaction.originalName}</span>
+                              </TooltipTrigger>
+                              <TooltipContent className="py-4">{transaction.originalName}</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
                         <TableCell className="font-mono text-xs border-r border-slate-200 whitespace-nowrap">
                           {transaction.date}
                         </TableCell>
                         <TableCell className="border-r border-slate-200">
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 font-mono text-xs">
+                          <Badge
+                            variant="outline"
+                            className="bg-blue-50 text-blue-700 border-blue-200 font-mono text-xs"
+                          >
                             {transaction.paymentMethod}
                           </Badge>
                         </TableCell>
@@ -273,7 +600,6 @@ export default function TransactionsTable() {
                         <TableCell className="text-xs border-r border-slate-200 whitespace-nowrap text-gray-600">
                           {formatDistanceToNow(new Date(transaction.processedAt), { addSuffix: true })}
                         </TableCell>
-                       
                       </TableRow>
                     ))
                   )}
@@ -310,7 +636,6 @@ export default function TransactionsTable() {
               </select>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -330,7 +655,6 @@ export default function TransactionsTable() {
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
-
             <div className="flex items-center gap-1">
               {getPaginationRange().map((page, index) => {
                 if (page === "...") {
@@ -358,7 +682,6 @@ export default function TransactionsTable() {
                 )
               })}
             </div>
-
             <Button
               variant="outline"
               size="sm"
