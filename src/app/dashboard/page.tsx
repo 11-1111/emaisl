@@ -7,10 +7,10 @@ import MerchantManagement from "@/components/merchant-management"
 import UploadedRecordsTable from "@/components/uploaded-records-table"
 import TransactionsTable from "@/components/transactions-table"
 import GeneratedRecordsTable from "@/components/generated-records-table"
-import type { Merchant, SentEmail } from "@/lib/types/types"
-import { useSearchParams, useRouter } from 'next/navigation'
+import type { SentEmail } from "@/lib/types/types"
+import { useSearchParams, useRouter } from "next/navigation"
 import { getAccessToken } from "@/lib/auth"
-import { Mail, Send, Users, Bell, LogOut, Menu, X, Upload, Receipt, FileText } from 'lucide-react'
+import { Mail, Send, Users, Bell, LogOut, Menu, X, Upload, Receipt, FolderUp, FileText , Upload as Upload2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -200,23 +200,94 @@ export default function Home() {
   }
 
   const menuItems = [
-    { id: "compose", label: "Compose", icon: Mail },
-    { id: "sent", label: "Sent Emails", icon: Send },
+    { id: "compose", label: "Upload", icon: Upload2 },
+     { id: "uploads", label: "Uploaded Reports", icon: FolderUp },
+      { id: "transactions", label: "Transactions", icon: Receipt },
+          { id: "generated", label: "Generated Reports", icon: FileText },
+    { id: "sent", label: "Emails", icon: Send },
     { id: "merchant", label: "Merchants", icon: Users },
-    { id: "uploads", label: "Uploaded Records", icon: Upload },
-    { id: "transactions", label: "Transactions", icon: Receipt },
-    { id: "generated", label: "Generated Records", icon: FileText },
   ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-sky-50 to-cyan-50 flex">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "hidden lg:flex fixed top-4 left-4 bottom-4 z-50 w-[20%] bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl rounded-3xl transform transition-all duration-300 ease-in-out flex-col",
         )}
       >
-        <div className="flex items-center justify-between p-6 lg:hidden">
+        <div className="flex items-center space-x-3 p-6 border-b border-gray-200/50">
+          <div className="w-10 h-10 bg-gradient-to-r from-[#16659e] to-[#1e7bb8] rounded-xl flex items-center justify-center">
+            <Mail className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="font-bold text-gray-900">Email Scheduler</h2>
+            <p className="text-xs text-gray-500">Management Portal</p>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            const isActive = activeTab === item.id
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleTabChange(item.id)}
+                className={cn(
+                  "w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all",
+                  isActive
+                    ? "bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white shadow-lg shadow-[#16659e]/25"
+                    : "text-gray-600 hover:bg-gray-100/80",
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-gray-200/50">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl hover:bg-gray-100/80 transition-all">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
+                  <AvatarFallback className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white">
+                    {getInitials(userEmail)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-gray-900">{userName || "Admin User"}</p>
+                  <p className="text-xs text-gray-500 truncate">{userEmail}</p>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{userName || "Admin User"}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+
+      {/* Mobile sidebar */}
+      <aside
+        className={cn(
+          "lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white/80 backdrop-blur-xl border-r border-white/20 shadow-lg transform transition-transform duration-300 ease-in-out",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="flex items-center justify-between p-6">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-[#16659e] to-[#1e7bb8] rounded-xl flex items-center justify-center">
               <Mail className="w-6 h-6 text-white" />
@@ -226,16 +297,6 @@ export default function Home() {
           <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5" />
           </Button>
-        </div>
-
-        <div className="hidden lg:flex items-center space-x-3 p-6 border-b border-gray-200/50">
-          <div className="w-10 h-10 bg-gradient-to-r from-[#16659e] to-[#1e7bb8] rounded-xl flex items-center justify-center">
-            <Mail className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="font-bold text-gray-900">Email Scheduler</h2>
-            <p className="text-xs text-gray-500">Management Portal</p>
-          </div>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -250,7 +311,7 @@ export default function Home() {
                   "w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all",
                   isActive
                     ? "bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white shadow-lg shadow-[#16659e]/25"
-                    : "text-gray-600 hover:bg-gray-100/80"
+                    : "text-gray-600 hover:bg-gray-100/80",
                 )}
               >
                 <Icon className="w-5 h-5" />
@@ -268,60 +329,14 @@ export default function Home() {
         />
       )}
 
-      <div className="flex-1 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-sm">
-          <div className="px-4 sm:px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="lg:hidden"
-                  onClick={() => setSidebarOpen(true)}
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-
-                <div className="lg:block hidden">
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                    Email Management
-                  </h1>
-                  <p className="text-sm text-gray-500">Email automation platform</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src="/placeholder.svg?height=40&width=40" alt="User" />
-                        <AvatarFallback className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white">
-                          {getInitials(userEmail)}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">{userName || "Admin User"}</p>
-                        <p className="text-xs leading-none text-muted-foreground">{userEmail}</p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      <span>Log out</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
+      
+        <main className="flex-1 flex flex-col py-6 lg:max-w-[75%] min-h-screen lg:ml-[23%]">
+          <div className="lg:hidden mb-4">
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
           </div>
-        </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
           {error.sentEmails && (
             <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 backdrop-blur-sm">
               <div className="flex items-center space-x-3">
@@ -384,7 +399,7 @@ export default function Home() {
             )}
           </div>
         </main>
-      </div>
+   
     </div>
   )
 }

@@ -136,7 +136,7 @@ export default function EmailComposer() {
                 <FileText className="w-5 h-5 text-purple-600" />
               </div>
               <div>
-                <Label className="text-base font-semibold text-gray-900">Upload Email Attachment</Label>
+                <Label className="text-base font-semibold text-gray-900">Upload Transaction Report</Label>
                 <p className="text-sm text-gray-500">Upload a file to send via email</p>
               </div>
             </div>

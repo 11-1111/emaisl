@@ -6,9 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { RefreshCw, Search, FileSpreadsheet } from 'lucide-react'
+import { RefreshCw, Search, FileSpreadsheet, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { formatDistanceToNow } from "date-fns"
 import { getAccessToken } from "@/lib/auth"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface Transaction {
   id: number
@@ -30,27 +35,52 @@ interface Transaction {
   updatedAt: string
 }
 
+interface PaginationMeta {
+  total: number
+  page: number
+  size: number
+  totalPages: number
+}
+
+interface ApiResponse {
+  data: Transaction[]
+  meta: PaginationMeta
+}
+
 export default function TransactionsTable() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
+  const [paginationMeta, setPaginationMeta] = useState<PaginationMeta>({
+    total: 0,
+    page: 1,
+    size: 25,
+    totalPages: 1,
+  })
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (page: number = currentPage, size: number = pageSize) => {
     setIsLoading(true)
     try {
       const token = getAccessToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/emails/transactions`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/app/emails/transactions?page=${page}&size=${size}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
 
       if (!response.ok) {
         throw new Error("Failed to fetch transactions")
       }
 
-      const data = await response.json()
-      setTransactions(data)
+      const apiResponse: ApiResponse = await response.json()
+      setTransactions(apiResponse.data)
+      setPaginationMeta(apiResponse.meta)
+      setCurrentPage(apiResponse.meta.page)
     } catch (error) {
       console.error("Error fetching transactions:", error)
     } finally {
@@ -62,9 +92,28 @@ export default function TransactionsTable() {
     fetchTransactions()
   }, [])
 
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= paginationMeta.totalPages) {
+      setCurrentPage(newPage)
+      fetchTransactions(newPage, pageSize)
+    }
+  }
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize)
+    setCurrentPage(1)
+    fetchTransactions(1, newSize)
+  }
+
   const filteredTransactions = transactions.filter((transaction) => {
     const query = searchQuery.toLowerCase()
-    return true
+    return (
+      transaction.confirmationCode.toLowerCase().includes(query) ||
+      transaction.reference.toLowerCase().includes(query) ||
+      transaction.description.toLowerCase().includes(query) ||
+      transaction.paymentMethod.toLowerCase().includes(query) ||
+      transaction.paymentCardNumber.toLowerCase().includes(query)
+    )
   })
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -75,9 +124,36 @@ export default function TransactionsTable() {
     }).format(amount)
   }
 
+  const getPaginationRange = () => {
+    const delta = 2
+    const range = []
+    const rangeWithDots = []
+    let l
+
+    for (let i = 1; i <= paginationMeta.totalPages; i++) {
+      if (i === 1 || i === paginationMeta.totalPages || (i >= currentPage - delta && i <= currentPage + delta)) {
+        range.push(i)
+      }
+    }
+
+    range.forEach((i) => {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1)
+        } else if (i - l !== 1) {
+          rangeWithDots.push("...")
+        }
+      }
+      rangeWithDots.push(i)
+      l = i
+    })
+
+    return rangeWithDots
+  }
+
   return (
-    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
-      <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50">
+    <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm !py-0">
+      <CardHeader className="border-b bg-gradient-to-r from-emerald-50 to-teal-50 p-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center">
@@ -88,7 +164,7 @@ export default function TransactionsTable() {
               <CardDescription>View and search transaction records from Excel uploads</CardDescription>
             </div>
           </div>
-          <Button onClick={fetchTransactions} disabled={isLoading} size="sm" className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
+          <Button onClick={() => fetchTransactions()} disabled={isLoading} size="sm" className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600">
             <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
@@ -114,12 +190,12 @@ export default function TransactionsTable() {
             </div>
           </div>
         ) : (
-          <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+          <div className="overflow-x-auto max-w-[75vw] md:max-w-[85vw] border rounded-lg overflow-hidden bg-white shadow-sm">
             <div className="overflow-x-auto">
               <Table className="excel-table">
                 <TableHeader>
                   <TableRow className="bg-gradient-to-r from-slate-100 to-slate-50 hover:bg-slate-100">
-                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[60px]">ID</TableHead>
+                    <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[60px]">originalName</TableHead>
                     <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Date</TableHead>
                     <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[120px]">Payment Method</TableHead>
                     <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Confirmation Code</TableHead>
@@ -131,7 +207,7 @@ export default function TransactionsTable() {
                     <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[180px]">Reference</TableHead>
                     <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[200px]">Description</TableHead>
                     <TableHead className="font-bold text-slate-700 border-r border-slate-200 min-w-[140px]">Processed At</TableHead>
-                    <TableHead className="font-bold text-slate-700 min-w-[80px]">Type</TableHead>
+                   
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -149,7 +225,19 @@ export default function TransactionsTable() {
                           index % 2 === 0 ? "bg-white" : "bg-slate-50/30"
                         }`}
                       >
-                        <TableCell className="font-mono text-xs border-r border-slate-200">{transaction.id}</TableCell>
+                        <TableCell className="font-mono text-xs border-r border-slate-200 max-w-[150px] truncate overflow-hidden text-ellipsis">
+                               <Tooltip>
+      <TooltipTrigger asChild>
+        <span> {transaction.originalName}</span>
+        
+      </TooltipTrigger>
+      <TooltipContent className="py-4">
+         {transaction.originalName}
+      </TooltipContent>
+    </Tooltip>
+
+ 
+</TableCell>
                         <TableCell className="font-mono text-xs border-r border-slate-200 whitespace-nowrap">
                           {transaction.date}
                         </TableCell>
@@ -185,11 +273,7 @@ export default function TransactionsTable() {
                         <TableCell className="text-xs border-r border-slate-200 whitespace-nowrap text-gray-600">
                           {formatDistanceToNow(new Date(transaction.processedAt), { addSuffix: true })}
                         </TableCell>
-                        <TableCell className="text-xs">
-                          <Badge variant="secondary" className="font-mono text-xs">
-                            {transaction.recordType}
-                          </Badge>
-                        </TableCell>
+                       
                       </TableRow>
                     ))
                   )}
@@ -199,16 +283,101 @@ export default function TransactionsTable() {
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <p>
-            Showing <span className="font-semibold">{filteredTransactions.length}</span> of{" "}
-            <span className="font-semibold">{transactions.length}</span> transactions
-          </p>
-          {searchQuery && (
-            <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="text-emerald-600 hover:text-emerald-700">
-              Clear search
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              Showing{" "}
+              <span className="font-semibold text-gray-900">
+                {paginationMeta.total === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-semibold text-gray-900">
+                {Math.min(currentPage * pageSize, paginationMeta.total)}
+              </span>{" "}
+              of <span className="font-semibold text-gray-900">{paginationMeta.total}</span> transactions
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Rows per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                className="text-sm border border-gray-300 rounded-md px-2 py-1 bg-white hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1 || isLoading}
+              className="hover:bg-emerald-50 hover:border-emerald-400 disabled:opacity-50"
+            >
+              <ChevronsLeft className="w-4 h-4" />
             </Button>
-          )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1 || isLoading}
+              className="hover:bg-emerald-50 hover:border-emerald-400 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+
+            <div className="flex items-center gap-1">
+              {getPaginationRange().map((page, index) => {
+                if (page === "...") {
+                  return (
+                    <span key={`ellipsis-${index}`} className="px-3 py-1 text-gray-500">
+                      ...
+                    </span>
+                  )
+                }
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handlePageChange(page as number)}
+                    disabled={isLoading}
+                    className={
+                      currentPage === page
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white"
+                        : "hover:bg-emerald-50 hover:border-emerald-400"
+                    }
+                  >
+                    {page}
+                  </Button>
+                )
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === paginationMeta.totalPages || isLoading}
+              className="hover:bg-emerald-50 hover:border-emerald-400 disabled:opacity-50"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(paginationMeta.totalPages)}
+              disabled={currentPage === paginationMeta.totalPages || isLoading}
+              className="hover:bg-emerald-50 hover:border-emerald-400 disabled:opacity-50"
+            >
+              <ChevronsRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

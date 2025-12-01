@@ -1,6 +1,5 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -35,10 +34,10 @@ import {
   Calendar,
   Send,
   Settings,
-  RefreshCw,
 } from "lucide-react"
 import { useState } from "react"
 import type { SentEmail } from "@/lib/types/types"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 interface SentEmailsTableProps {
   sentEmails: SentEmail[]
@@ -70,11 +69,11 @@ export default function SentEmailsTable({
   const [blockingStates, setBlockingStates] = useState<Record<number, boolean>>({})
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
-    user: false, // Hidden by default to save space
-    recipients: false, // Hidden by default to save space
-    created: true, // Show by default
-    sent: true, // Show by default
-    attachments: false, // Hidden by default to save space
+    user: false,
+    recipients: false,
+    created: true,
+    sent: true,
+    attachments: false,
   })
 
   const formatDate = (dateString: string) => {
@@ -161,19 +160,12 @@ export default function SentEmailsTable({
         throw new Error(result.message || `Failed to ${shouldBlock ? "block" : "unblock"} email`)
       }
 
-      // Update the parent component's state immediately (optimistic update)
       onEmailUpdate?.(emailId, shouldBlock)
 
       toast.success(`Email ${shouldBlock ? "blocked" : "unblocked"} successfully`)
-      // setTimeout(() => {
-      //   onRefresh?.()
-      // }, 500)
     } catch (error: any) {
       console.error("Error updating email:", error)
       toast.error(error.message || `Error: Failed to ${shouldBlock ? "block" : "unblock"} email`)
-
-      // Refresh data on error to revert any optimistic updates
-      // onRefresh?.()
     } finally {
       setBlockingStates((prev) => ({ ...prev, [emailId]: false }))
     }
@@ -184,20 +176,20 @@ export default function SentEmailsTable({
       return {
         label: "Blocked",
         icon: Ban,
-        className: "bg-red-100 text-red-700 border-red-200",
+        className: "bg-slate-50 text-slate-700 border border-slate-200",
       }
     }
     if (email.is_sent) {
       return {
         label: "Sent",
         icon: Send,
-        className: "bg-green-100 text-green-700 border-green-200",
+        className: "bg-emerald-50 text-emerald-700 border border-emerald-100",
       }
     }
     return {
       label: "Queued",
       icon: Clock,
-      className: "bg-yellow-100 text-yellow-700 border-yellow-200",
+      className: "bg-amber-50 text-amber-700 border border-amber-100",
     }
   }
 
@@ -209,140 +201,153 @@ export default function SentEmailsTable({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Column Visibility Controls */}
-      <div className="flex justify-between items-center">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing || isLoading}
-          className="gap-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm !py-0">
+        <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+              Scheduled & Sent Emails
+            </CardTitle>
+            <CardDescription className="text-gray-600">
+              Manage and review your email history
+            </CardDescription>
+          </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
-              <Settings className="w-4 h-4" />
-              Columns
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem checked={columnVisibility.user} onCheckedChange={() => toggleColumn("user")}>
-              <User className="w-4 h-4 mr-2" />
-              Initiated By
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={columnVisibility.recipients}
-              onCheckedChange={() => toggleColumn("recipients")}
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              Recipients
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={columnVisibility.created}
-              onCheckedChange={() => toggleColumn("created")}
-            >
-              <Calendar className="w-4 h-4 mr-2" />
-              Created Date
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem checked={columnVisibility.sent} onCheckedChange={() => toggleColumn("sent")}>
-              <Send className="w-4 h-4 mr-2" />
-              Sent Date
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              checked={columnVisibility.attachments}
-              onCheckedChange={() => toggleColumn("attachments")}
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Attachments
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="default"
+                className="gap-2 hover:bg-white hover:shadow-md hover:scale-105 transition-all duration-200 bg-white border-gray-200 text-gray-700"
+              >
+                <Settings className="w-4 h-4" />
+                Columns
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuCheckboxItem checked={columnVisibility.user} onCheckedChange={() => toggleColumn("user")}>
+                <User className="w-4 h-4 mr-2" />
+                Initiated By
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={columnVisibility.recipients}
+                onCheckedChange={() => toggleColumn("recipients")}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Recipients
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={columnVisibility.created}
+                onCheckedChange={() => toggleColumn("created")}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Created Date
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem checked={columnVisibility.sent} onCheckedChange={() => toggleColumn("sent")}>
+                <Send className="w-4 h-4 mr-2" />
+                Sent Date
+              </DropdownMenuCheckboxItem>
+              <DropdownMenuCheckboxItem
+                checked={columnVisibility.attachments}
+                onCheckedChange={() => toggleColumn("attachments")}
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Attachments
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </CardHeader>
 
-      {/* Main Table Card */}
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm overflow-hidden px-8">
-        <CardContent className="p-0">
+      <CardContent className="p-6">
+        <div className="space-y-6">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 space-y-4">
-              <Loader2 className="h-12 w-12 animate-spin text-[#16659e]" />
-              <p className="text-gray-600 font-medium">Loading email history...</p>
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+              <div className="relative">
+                <div className="w-14 h-14 bg-gradient-to-br from-[#16659e]/10 to-[#16659e]/5 rounded-2xl flex items-center justify-center shadow-sm border border-[#16659e]/20">
+                  <Loader2 className="h-6 w-6 animate-spin text-[#16659e]" />
+                </div>
+              </div>
+              <div className="text-center space-y-1">
+                <p className="text-gray-900 font-semibold">Loading email history</p>
+                <p className="text-gray-500 text-sm">Please wait while we fetch your emails...</p>
+              </div>
             </div>
           ) : sentEmails.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 space-y-4">
-              <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center">
-                <Mail className="w-10 h-10 text-gray-400" />
+            <div className="flex flex-col items-center justify-center py-20 space-y-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl flex items-center justify-center shadow-sm border border-slate-200">
+                  <Mail className="w-10 h-10 text-slate-400" />
+                </div>
               </div>
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-900">No emails found</h3>
-                <p className="text-gray-500 mt-1">Start by composing your first email campaign</p>
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-semibold text-gray-900">No emails sent yet</h3>
+                <p className="text-gray-500 text-sm max-w-sm">
+                  Start by composing your first email campaign to see it listed here
+                </p>
               </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-w-[80vw]">
               <Table>
-                <TableHeader className="bg-gray-50/80">
-                  <TableRow className="border-b border-gray-200/50">
-                    {/* Always visible columns */}
-                    <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[200px]">
+                <TableHeader>
+                  <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100/50 hover:from-gray-50 hover:to-gray-100/50 border-b border-gray-200">
+                    <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[250px]">
                       <div className="flex items-center space-x-2">
-                        <Mail className="w-4 h-4" />
+                        <Mail className="w-3.5 h-3.5 text-gray-400" />
                         <span>Merchant & Subject</span>
                       </div>
                     </TableHead>
 
-                    {/* Collapsible columns */}
                     {columnVisibility.user && (
-                      <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[150px]">
+                      <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[180px]">
                         <div className="flex items-center space-x-2">
-                          <User className="w-4 h-4" />
+                          <User className="w-3.5 h-3.5 text-gray-400" />
                           <span>Initiated By</span>
                         </div>
                       </TableHead>
                     )}
 
                     {columnVisibility.recipients && (
-                      <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[200px]">
-                        Recipients
+                      <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[220px]">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-3.5 h-3.5 text-gray-400" />
+                          <span>Recipients</span>
+                        </div>
                       </TableHead>
                     )}
 
                     {columnVisibility.created && (
-                      <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[120px]">
+                      <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[140px]">
                         <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4" />
+                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
                           <span>Created</span>
                         </div>
                       </TableHead>
                     )}
 
                     {columnVisibility.sent && (
-                      <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[120px]">
+                      <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[140px]">
                         <div className="flex items-center space-x-2">
-                          <Send className="w-4 h-4" />
+                          <Send className="w-3.5 h-3.5 text-gray-400" />
                           <span>Sent</span>
                         </div>
                       </TableHead>
                     )}
 
-                    {/* Always visible columns */}
-                    <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[100px]">
+                    <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[120px]">
                       Status
                     </TableHead>
-                    <TableHead className="px-4 py-4 text-left font-semibold text-gray-900 min-w-[120px]">
+                    <TableHead className="px-6 py-4 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[140px]">
                       Actions
                     </TableHead>
 
                     {columnVisibility.attachments && (
-                      <TableHead className="px-4 py-4 text-right font-semibold text-gray-900 min-w-[100px]">
+                      <TableHead className="px-6 py-4 text-right font-semibold text-gray-700 text-xs uppercase tracking-wider min-w-[120px]">
                         <div className="flex items-center justify-end space-x-2">
-                          <FileText className="w-4 h-4" />
+                          <FileText className="w-3.5 h-3.5 text-gray-400" />
                           <span>Files</span>
                         </div>
                       </TableHead>
@@ -358,19 +363,16 @@ export default function SentEmailsTable({
                     return (
                       <TableRow
                         key={email.id}
-                        className={`border-b border-gray-100 transition-all duration-200 hover:bg-gray-50/50 ${
-                          isBlocked ? "bg-red-50/30 opacity-60 hover:bg-red-50/50" : "hover:shadow-sm"
-                        }`}
+                        className={`border-b border-gray-100 transition-all duration-150 ${isBlocked ? "bg-gray-50/50" : "hover:bg-gray-50/70 hover:shadow-sm"}`}
                       >
-                        {/* Merchant & Subject Column (Always visible) */}
-                        <TableCell className="px-4 py-4">
-                          <div className={`space-y-2 ${isBlocked ? "opacity-60" : ""}`}>
-                            <div className="font-semibold text-gray-900">{email.to}</div>
-                            <div className="space-y-1">
+                        <TableCell className="px-6 py-4">
+                          <div className={`space-y-1.5 ${isBlocked ? "opacity-60" : ""}`}>
+                            <div className="font-semibold text-gray-900 text-sm">{email.to}</div>
+                            <div className="space-y-0.5">
                               {email.subject.split(" - ").map((part, idx) => (
                                 <div
                                   key={idx}
-                                  className={idx === 0 ? "text-sm font-medium text-gray-700" : "text-xs text-gray-500"}
+                                  className={idx === 0 ? "text-xs font-medium text-gray-700" : "text-xs text-gray-500"}
                                 >
                                   {part}
                                 </div>
@@ -379,57 +381,60 @@ export default function SentEmailsTable({
                           </div>
                         </TableCell>
 
-                        {/* User Column (Collapsible) */}
                         {columnVisibility.user && (
-                          <TableCell className="px-4 py-4">
+                          <TableCell className="px-6 py-4">
                             <div className="flex items-center space-x-3">
-                              <Avatar className="h-8 w-8">
+                              <Avatar className="h-9 w-9 ring-2 ring-gray-100 shadow-sm">
                                 <AvatarImage
-                                  src={`/placeholder.svg?height=32&width=32&query=${getUserInitials(email.user)}`}
+                                  src={`/.jpg?key=ipb34&height=32&width=32&query=${getUserInitials(email.user)}`}
                                   alt={getUserName(email.user)}
                                 />
-                                <AvatarFallback className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white text-xs font-medium">
+                                <AvatarFallback className="bg-gradient-to-br from-[#16659e]/10 to-[#16659e]/5 text-[#16659e] text-xs font-semibold">
                                   {getUserInitials(email.user)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className={isBlocked ? "opacity-60" : ""}>
-                                <p className="text-xs text-gray-500">{email.user || "No email"}</p>
+                                <p className="text-xs text-gray-600 font-medium">{email.user || "No email"}</p>
                               </div>
                             </div>
                           </TableCell>
                         )}
 
-                        {/* Recipients Column (Collapsible) */}
                         {columnVisibility.recipients && (
-                          <TableCell className="px-4 py-4">
-                            <div className={`space-y-1 ${isBlocked ? "opacity-60" : ""}`}>
+                          <TableCell className="px-6 py-4">
+                            <div className={`flex flex-wrap gap-1.5 ${isBlocked ? "opacity-60" : ""}`}>
                               {email.recipient_emails?.slice(0, 2).map((recipient, idx) => (
-                                <Badge key={idx} variant="secondary" className="text-xs">
+                                <Badge
+                                  key={idx}
+                                  variant="secondary"
+                                  className="text-xs bg-[#16659e]/10 text-[#16659e] border border-[#16659e]/20 font-medium px-2.5 py-0.5"
+                                >
                                   {recipient.replace(/"/g, "")}
                                 </Badge>
                               ))}
                               {email.recipient_emails && email.recipient_emails.length > 2 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{email.recipient_emails.length - 2} more
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs bg-white text-gray-600 border-gray-200 font-medium"
+                                >
+                                  +{email.recipient_emails.length - 2}
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
                         )}
 
-                        {/* Created At Column (Collapsible) */}
                         {columnVisibility.created && (
-                          <TableCell className="px-4 py-4">
-                            <div className={`text-sm text-gray-600 ${isBlocked ? "opacity-60" : ""}`}>
+                          <TableCell className="px-6 py-4">
+                            <div className={`text-sm text-gray-700 font-medium ${isBlocked ? "opacity-60" : ""}`}>
                               {formatDateShort(email.created_at)}
                             </div>
                           </TableCell>
                         )}
 
-                        {/* Sent At Column (Collapsible) */}
                         {columnVisibility.sent && (
-                          <TableCell className="px-4 py-4">
-                            <div className={`text-sm text-gray-600 ${isBlocked ? "opacity-60" : ""}`}>
+                          <TableCell className="px-6 py-4">
+                            <div className={`text-sm text-gray-700 font-medium ${isBlocked ? "opacity-60" : ""}`}>
                               {!email.is_sent && new Date(email.sent_at) < new Date()
                                 ? "---"
                                 : formatDateShort(email.sent_at)}
@@ -437,58 +442,54 @@ export default function SentEmailsTable({
                           </TableCell>
                         )}
 
-                        {/* Status Column (Always visible) */}
-                        <TableCell className="px-4 py-4">
-                          <Badge className={`${statusConfig.className} border font-medium text-xs`}>
-                            <StatusIcon className="w-3 h-3 mr-1" />
+                        <TableCell className="px-6 py-4">
+                          <Badge className={`${statusConfig.className} font-medium text-xs px-3 py-1 rounded-full`}>
+                            <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
                             {statusConfig.label}
                           </Badge>
                         </TableCell>
 
-                        {/* Actions Column (Always visible) */}
-                        <TableCell className="px-4 py-4">
-                          <div className="flex gap-3">
+                        <TableCell className="px-6 py-4">
+                          <div className="flex gap-2">
                             {email.blocked ? (
                               <button
                                 onClick={() => !blockingStates[email.id] && handleBlockUnblock(email.id, false)}
                                 disabled={blockingStates[email.id]}
-                                className="group flex w-[100px] justify-center items-center gap-2 px-3 py-1 text-xs font-medium text-black border border-black bg-transparent rounded-md transition-all duration-300 hover:bg-black hover:text-white hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transform"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 hover:scale-105 border border-emerald-200 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                               >
-                                <span className="flex items-center justify-center">
-                                  {blockingStates[email.id] ? (
-                                    <Loader2 className="h-4 w-4 animate-spin text-black group-hover:text-white transition-colors" />
-                                  ) : (
-                                    <CheckCircle className="h-4 w-4 text-black group-hover:text-white transition-colors" />
-                                  )}
-                                </span>
+                                {blockingStates[email.id] ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle className="h-3.5 w-3.5" />
+                                )}
                                 <span>Unblock</span>
                               </button>
                             ) : (
                               <button
                                 onClick={() => !blockingStates[email.id] && handleBlockUnblock(email.id, true)}
                                 disabled={blockingStates[email.id]}
-                                className="group flex w-[100px] justify-center items-center gap-2 px-3 py-1 text-xs font-medium text-black border border-black bg-transparent rounded-md transition-all duration-300 hover:bg-black hover:text-white hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transform"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 hover:scale-105 border border-slate-200 rounded-lg transition-all duration-200 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                               >
-                                <span className="flex items-center justify-center">
-                                  {blockingStates[email.id] ? (
-                                    <Loader2 className="h-4 w-4 animate-spin text-black group-hover:text-white transition-colors" />
-                                  ) : (
-                                    <Ban className="h-4 w-4 text-black group-hover:text-white transition-colors" />
-                                  )}
-                                </span>
+                                {blockingStates[email.id] ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Ban className="h-3.5 w-3.5" />
+                                )}
                                 <span>Block</span>
                               </button>
                             )}
                           </div>
                         </TableCell>
 
-                        {/* Attachments Column (Collapsible) */}
                         {columnVisibility.attachments && (
-                          <TableCell className="px-4 py-4">
-                            <div className="flex justify-end">
+                          <TableCell className="px-6 py-4">
+                            <div className="flex justify-end items-center gap-2">
                               {email.attachments && email.attachments.length > 0 ? (
-                                <div className="flex items-center space-x-2">
-                                  <Badge variant="outline" className="text-xs">
+                                <>
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs bg-white text-gray-600 border-gray-200 font-medium px-2 py-0.5"
+                                  >
                                     {email.attachments.length}
                                   </Badge>
                                   {email.attachments.slice(0, 1).map((file, idx) => (
@@ -497,19 +498,21 @@ export default function SentEmailsTable({
                                       href={getAttachmentUrl(file)}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-colors ${
+                                      className={`inline-flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-200 ${
                                         isBlocked
-                                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                          : "bg-blue-50 text-blue-600 hover:bg-blue-100"
+                                          ? "bg-slate-50 text-slate-300 cursor-not-allowed"
+                                          : "text-slate-600 hover:text-[#16659e] hover:bg-[#16659e]/10 hover:scale-110 border border-transparent hover:border-[#16659e]/20 hover:shadow-md"
                                       }`}
                                       onClick={isBlocked ? (e) => e.preventDefault() : undefined}
                                     >
-                                      <Download className="w-3 h-3" />
+                                      <Download className="w-4 h-4" />
                                     </a>
                                   ))}
-                                </div>
+                                </>
                               ) : (
-                                <span className={`text-xs text-gray-400 ${isBlocked ? "opacity-60" : ""}`}>None</span>
+                                <span className={`text-xs text-gray-400 ${isBlocked ? "opacity-60" : ""}`}>
+                                  No files
+                                </span>
                               )}
                             </div>
                           </TableCell>
@@ -522,9 +525,8 @@ export default function SentEmailsTable({
             </div>
           )}
 
-          {/* Pagination */}
           {!isLoading && sentEmails.length > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200/50 bg-gray-50/30">
+            <div className="px-6 py-4 border-t bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-b-xl">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
@@ -534,7 +536,9 @@ export default function SentEmailsTable({
                         e.preventDefault()
                         if (currentPage > 1) onPageChange(currentPage - 1)
                       }}
-                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                      className={`${
+                        currentPage <= 1 ? "pointer-events-none opacity-50" : "hover:bg-white hover:shadow-sm"
+                      } transition-all duration-200 border-gray-200`}
                     />
                   </PaginationItem>
 
@@ -558,6 +562,11 @@ export default function SentEmailsTable({
                               e.preventDefault()
                               onPageChange(1)
                             }}
+                            className={
+                              currentPage === 1
+                                ? "bg-[#16659e] text-white font-semibold shadow-sm hover:bg-[#16659e]/90"
+                                : "hover:bg-white hover:shadow-sm transition-all duration-200"
+                            }
                           >
                             1
                           </PaginationLink>
@@ -578,6 +587,11 @@ export default function SentEmailsTable({
                               e.preventDefault()
                               onPageChange(i)
                             }}
+                            className={
+                              currentPage === i
+                                ? "bg-[#16659e] text-white font-semibold shadow-sm hover:bg-[#16659e]/90"
+                                : "hover:bg-white hover:shadow-sm transition-all duration-200"
+                            }
                           >
                             {i}
                           </PaginationLink>
@@ -598,6 +612,11 @@ export default function SentEmailsTable({
                               e.preventDefault()
                               onPageChange(totalPages)
                             }}
+                            className={
+                              currentPage === totalPages
+                                ? "bg-[#16659e] text-white font-semibold shadow-sm hover:bg-[#16659e]/90"
+                                : "hover:bg-white hover:shadow-sm transition-all duration-200"
+                            }
                           >
                             {totalPages}
                           </PaginationLink>
@@ -615,15 +634,17 @@ export default function SentEmailsTable({
                         e.preventDefault()
                         if (currentPage < totalPages) onPageChange(currentPage + 1)
                       }}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                      className={`${
+                        currentPage >= totalPages ? "pointer-events-none opacity-50" : "hover:bg-white hover:shadow-sm"
+                      } transition-all duration-200 border-gray-200`}
                     />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

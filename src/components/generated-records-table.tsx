@@ -1,17 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Dialog,
   DialogContent,
@@ -23,7 +16,19 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, RefreshCw, FileSpreadsheet, Eye, Send, Calendar, Download, Mail } from 'lucide-react'
+import {
+  Loader2,
+  RefreshCw,
+  FileSpreadsheet,
+  Eye,
+  Send,
+  Calendar,
+  Mail,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react"
 import { getAccessToken } from "@/lib/auth"
 import { toast } from "sonner"
 import type { Merchant } from "@/lib/types/types"
@@ -31,6 +36,16 @@ import type { Merchant } from "@/lib/types/types"
 interface GeneratedRecord {
   generatedAt: string
   attachments: string[]
+}
+
+interface PaginatedResponse {
+  data: GeneratedRecord[]
+  meta: {
+    total: number
+    page: number
+    size: number
+    totalPages: number
+  }
 }
 
 export default function GeneratedRecordsTable() {
@@ -41,7 +56,16 @@ export default function GeneratedRecordsTable() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [composeDialogOpen, setComposeDialogOpen] = useState(false)
   const [isSending, setIsSending] = useState(false)
-  
+
+  const [page, setPage] = useState(1)
+  const [size, setSize] = useState(10)
+  const [meta, setMeta] = useState({
+    total: 0,
+    page: 1,
+    size: 10,
+    totalPages: 0,
+  })
+
   // Compose form state
   const [selectedRecord, setSelectedRecord] = useState<GeneratedRecord | null>(null)
   const [selectedAttachmentIndex, setSelectedAttachmentIndex] = useState<number>(0)
@@ -57,18 +81,22 @@ export default function GeneratedRecordsTable() {
     else setIsLoading(true)
 
     try {
-      const response = await fetch("http://localhost:3001/settlements/app/emails/generated-records", {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `http://localhost:3001/settlements/app/emails/generated-records?page=${page}&size=${size}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      })
+      )
 
       if (!response.ok) {
         throw new Error("Failed to fetch generated records")
       }
 
-      const data = await response.json()
-      setRecords(data)
+      const data: PaginatedResponse = await response.json()
+      setRecords(data.data)
+      setMeta(data.meta)
     } catch (error) {
       console.error("Error fetching generated records:", error)
       toast.error("Failed to load generated records")
@@ -102,6 +130,9 @@ export default function GeneratedRecordsTable() {
 
   useEffect(() => {
     fetchRecords()
+  }, [page, size])
+
+  useEffect(() => {
     fetchMerchants()
   }, [])
 
@@ -194,6 +225,53 @@ export default function GeneratedRecordsTable() {
     }
   }
 
+  const getPageNumbers = () => {
+    const pages = []
+    const maxVisible = 5
+    const { totalPages } = meta
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      if (page <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i)
+        }
+        pages.push(-1)
+        pages.push(totalPages)
+      } else if (page >= totalPages - 2) {
+        pages.push(1)
+        pages.push(-1)
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        pages.push(1)
+        pages.push(-1)
+        pages.push(page - 1)
+        pages.push(page)
+        pages.push(page + 1)
+        pages.push(-1)
+        pages.push(totalPages)
+      }
+    }
+
+    return pages
+  }
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= meta.totalPages) {
+      setPage(newPage)
+    }
+  }
+
+  const handleSizeChange = (newSize: string) => {
+    setSize(Number(newSize))
+    setPage(1)
+  }
+
   if (isLoading) {
     return (
       <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
@@ -209,32 +287,32 @@ export default function GeneratedRecordsTable() {
 
   return (
     <>
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
-        <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-[#16659e] to-[#1e7bb8] rounded-xl flex items-center justify-center">
-                <FileSpreadsheet className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold text-gray-900">Generated Records</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">View and manage generated settlement records</p>
-              </div>
-            </div>
-            <Button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              variant="outline"
-              className="bg-white/70 hover:bg-white border-gray-200"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
+      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm !py-0">
+       
 
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
+         <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                     Generated Records
+                    </CardTitle>
+                    <CardDescription className="text-gray-600">
+                     View and manage generated settlement records
+                    </CardDescription>
+                  </div>
+                  <Button
+                     onClick={handleRefresh}
+              disabled={isRefreshing}
+                    className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#145182] hover:to-[#16659e] text-white shadow-lg shadow-[#16659e]/25"
+                  >
+                    <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    Refresh
+                  </Button>
+                </div>
+              </CardHeader>
+
+        <CardContent className="p-6">
+          <div className="overflow-x-auto max-w-[80vw]">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50/50 hover:bg-gray-50/50">
@@ -309,20 +387,111 @@ export default function GeneratedRecordsTable() {
               </TableBody>
             </Table>
           </div>
+
+          {records.length > 0 && (
+            <div className="border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <p className="text-sm text-gray-600">
+                    Showing <span className="font-semibold text-gray-900">{(page - 1) * size + 1}</span> to{" "}
+                    <span className="font-semibold text-gray-900">{Math.min(page * size, meta.total)}</span> of{" "}
+                    <span className="font-semibold text-gray-900">{meta.total}</span> records
+                  </p>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600">Rows per page:</span>
+                    <Select value={size.toString()} onValueChange={handleSizeChange}>
+                      <SelectTrigger className="w-[70px] h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(1)}
+                    disabled={page === 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+
+                  <div className="flex items-center space-x-1">
+                    {getPageNumbers().map((pageNum, idx) => {
+                      if (pageNum === -1) {
+                        return (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">
+                            ...
+                          </span>
+                        )
+                      }
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={page === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`h-8 w-8 p-0 ${
+                            page === pageNum ? "bg-gradient-to-r from-[#16659e] to-[#1e7bb8] text-white shadow-md" : ""
+                          }`}
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page === meta.totalPages}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(meta.totalPages)}
+                    disabled={page === meta.totalPages}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Compose Dialog */}
       <Dialog open={composeDialogOpen} onOpenChange={setComposeDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="max-w-[600px] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Mail className="w-5 h-5 text-[#16659e]" />
               <span>Compose Email</span>
             </DialogTitle>
-            <DialogDescription>
-              Select a merchant to send this generated record
-            </DialogDescription>
+            <DialogDescription>Select a merchant to send this generated record</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 py-4">
@@ -335,9 +504,7 @@ export default function GeneratedRecordsTable() {
                     <p className="text-sm font-medium text-blue-900 truncate">
                       {getFileName(selectedRecord.attachments[selectedAttachmentIndex])}
                     </p>
-                    <p className="text-xs text-blue-700">
-                      Generated: {formatDate(selectedRecord.generatedAt)}
-                    </p>
+                    <p className="text-xs text-blue-700">Generated: {formatDate(selectedRecord.generatedAt)}</p>
                   </div>
                 </div>
               </div>
