@@ -552,7 +552,7 @@ export default function TransactionsTable() {
                           index % 2 === 0 ? "bg-white" : "bg-slate-50/30"
                         }`}
                       >
-                        <TableCell className="font-mono text-xs border-r border-slate-200 max-w-[150px] truncate overflow-hidden text-ellipsis">
+                        <TableCell className="font-mono text-xs border-r border-slate-200'">
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>

@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Download,
 } from "lucide-react"
 import { toast } from "sonner"
 import { getAccessToken } from "@/lib/auth"
@@ -57,7 +58,7 @@ export default function UploadedRecordsTable() {
       }
 
       const token = getAccessToken()
-      const response = await fetch(`http://localhost:3001/settlements/app/emails/uploads?page=${page}&size=${size}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/emails/uploads?page=${page}&size=${size}`, {
         headers: token
           ? {
               Authorization: `Bearer ${token}`,
@@ -95,6 +96,11 @@ export default function UploadedRecordsTable() {
     } catch {
       return []
     }
+  }
+
+  const getAttachmentUrl = (attachmentFileName: string) => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+    return `${baseUrl}/app/reports/attachments/${encodeURIComponent(attachmentFileName)}`
   }
 
   const formatDate = (dateString: string) => {
@@ -199,8 +205,8 @@ export default function UploadedRecordsTable() {
   }
 
   return (
-      <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm !py-0">
-        <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
+    <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm !py-0">
+      <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
@@ -274,9 +280,12 @@ export default function UploadedRecordsTable() {
                         <TableCell>
                           <div className="space-y-2">
                             {attachments.map((attachment, idx) => (
-                              <div
+                              <a
                                 key={idx}
-                                className="flex items-center space-x-2 bg-gradient-to-r from-gray-50 to-white px-3 py-2 rounded-lg border border-gray-200 group hover:border-[#16659e]/30 transition-all"
+                                href={getAttachmentUrl(attachment)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center space-x-2 bg-gradient-to-r from-gray-50 to-white px-3 py-2 rounded-lg border border-gray-200 group hover:border-[#16659e]/30 hover:shadow-md transition-all cursor-pointer"
                               >
                                 <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                   <FileText className="w-4 h-4 text-[#16659e]" />
@@ -289,7 +298,10 @@ export default function UploadedRecordsTable() {
                                     {getFileExtension(attachment).toUpperCase()}
                                   </Badge>
                                 </div>
-                              </div>
+                                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Download className="w-4 h-4 text-[#16659e]" />
+                                </div>
+                              </a>
                             ))}
                           </div>
                         </TableCell>

@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import {
   Download,
@@ -34,6 +35,8 @@ import {
   Calendar,
   Send,
   Settings,
+  Timer,
+  Save,
 } from "lucide-react"
 import { useState } from "react"
 import type { SentEmail } from "@/lib/types/types"
@@ -76,6 +79,48 @@ export default function SentEmailsTable({
     attachments: false,
   })
 
+  const [selectedHour, setSelectedHour] = useState<string>("")
+  const [selectedMinute, setSelectedMinute] = useState<string>("")
+  const [isSavingCron, setIsSavingCron] = useState(false)
+
+  // Generate hours (0-23) and minutes (0-59)
+  const hours = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"))
+  const minutes = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, "0"))
+
+  // Convert selected time to cron format and save
+  const handleSaveCronSchedule = async () => {
+    if (!selectedHour || !selectedMinute) {
+      toast.error("Please select both hour and minute")
+      return
+    }
+
+    const cronExpression = `${Number.parseInt(selectedMinute)} ${Number.parseInt(selectedHour)} * * *`
+
+    setIsSavingCron(true)
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/emails/cron`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cron: cronExpression }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json()
+        throw new Error(result.message || "Failed to save schedule")
+      }
+
+      toast.success(`Schedule saved: Emails will be sent daily at ${selectedHour}:${selectedMinute}`)
+    } catch (error: any) {
+      console.error("Error saving cron schedule:", error)
+      toast.error(error.message || "Failed to save schedule")
+    } finally {
+      setIsSavingCron(false)
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
 
@@ -108,7 +153,7 @@ export default function SentEmailsTable({
     if (!attachmentFileName) return ""
 
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    return `${baseUrl}/app/attachments/${encodeURIComponent(attachmentFileName)}`
+    return `${baseUrl}/app/reports/generated/${encodeURIComponent(attachmentFileName)}`
   }
 
   const getUserInitials = (user: any) => {
@@ -202,15 +247,13 @@ export default function SentEmailsTable({
 
   return (
     <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm !py-0">
-        <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
+      <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
               Scheduled & Sent Emails
             </CardTitle>
-            <CardDescription className="text-gray-600">
-              Manage and review your email history
-            </CardDescription>
+            <CardDescription className="text-gray-600">Manage and review your email history</CardDescription>
           </div>
 
           <DropdownMenu>
@@ -263,6 +306,75 @@ export default function SentEmailsTable({
 
       <CardContent className="p-6">
         <div className="space-y-6">
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-500 rounded-lg flex items-center justify-center shadow-sm">
+                  <Timer className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Daily Email Schedule</h3>
+                  <p className="text-sm text-gray-600">Set the time for daily automated emails</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 p-1.5 shadow-sm">
+                  <Select value={selectedHour} onValueChange={setSelectedHour}>
+                    <SelectTrigger className="w-[80px] border-0 bg-transparent focus:ring-0 focus:ring-offset-0">
+                      <SelectValue placeholder="HH" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hours.map((hour) => (
+                        <SelectItem key={hour} value={hour}>
+                          {hour}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <span className="text-xl font-bold text-gray-400">:</span>
+
+                  <Select value={selectedMinute} onValueChange={setSelectedMinute}>
+                    <SelectTrigger className="w-[80px] border-0 bg-transparent focus:ring-0 focus:ring-offset-0">
+                      <SelectValue placeholder="MM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {minutes.map((minute) => (
+                        <SelectItem key={minute} value={minute}>
+                          {minute}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <Button
+                  onClick={handleSaveCronSchedule}
+                  disabled={isSavingCron || !selectedHour || !selectedMinute}
+                  className="bg-gradient-to-r from-indigo-500 to-blue-500 hover:from-indigo-600 hover:to-blue-600 text-white shadow-sm"
+                >
+                  {isSavingCron ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                  Save Schedule
+                </Button>
+              </div>
+            </div>
+
+            {selectedHour && selectedMinute && (
+              <div className="mt-3 pt-3 border-t border-indigo-100">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium text-gray-700">Cron Expression:</span>{" "}
+                  <code className="bg-white px-2 py-1 rounded text-indigo-600 font-mono text-xs border border-indigo-100">
+                    {`${Number.parseInt(selectedMinute)} ${Number.parseInt(selectedHour)} * * *`}
+                  </code>
+                  <span className="ml-2 text-gray-500">
+                    (Runs daily at {selectedHour}:{selectedMinute})
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <div className="relative">

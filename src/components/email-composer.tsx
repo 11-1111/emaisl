@@ -5,15 +5,15 @@ import { useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Paperclip, X, Loader2, Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react'
+import { Paperclip, X, Loader2, Upload, FileText, CheckCircle, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { getAccessToken } from "@/lib/auth"
 import { Progress } from "@/components/ui/progress"
 
 export default function EmailComposer() {
   const [uploadProgress, setUploadProgress] = useState<number>(0)
-  const [attachment, setAttachment] = useState<File | null>(null)
+  const [attachments, setAttachments] = useState<File[]>([])
   const [isSending, setIsSending] = useState<boolean>(false)
   const [dragActive, setDragActive] = useState<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -36,24 +36,25 @@ export default function EmailComposer() {
     e.stopPropagation()
     setDragActive(false)
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0]
-      setAttachment(file)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files)
+      setAttachments((prev) => [...prev, ...newFiles])
     }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      setAttachment(file)
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files)
+      setAttachments((prev) => [...prev, ...newFiles])
     }
-  }
-
-  const removeAttachment = () => {
-    setAttachment(null)
+    // Reset file input to allow selecting the same file again
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+  }
+
+  const removeAttachment = (indexToRemove: number) => {
+    setAttachments((prev) => prev.filter((_, index) => index !== indexToRemove))
   }
 
   const formatFileSize = (bytes: number) => {
@@ -65,8 +66,8 @@ export default function EmailComposer() {
   }
 
   const handleUploadEmail = async () => {
-    if (!attachment) {
-      toast.error("Please select a file to upload")
+    if (attachments.length === 0) {
+      toast.error("Please select at least one file to upload")
       return
     }
 
@@ -75,7 +76,9 @@ export default function EmailComposer() {
 
     try {
       const formData = new FormData()
-      formData.append("attachments", attachment)
+      attachments.forEach((file) => {
+        formData.append("attachments", file)
+      })
 
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
@@ -106,10 +109,10 @@ export default function EmailComposer() {
 
       const result = await response.json()
 
-      toast.success(result.message || "File uploaded successfully! 🎉")
+      toast.success(result.message || "Files uploaded successfully! 🎉")
 
       setTimeout(() => {
-        setAttachment(null)
+        setAttachments([])
         setUploadProgress(0)
         if (fileInputRef.current) {
           fileInputRef.current.value = ""
@@ -117,7 +120,7 @@ export default function EmailComposer() {
       }, 1000)
     } catch (error) {
       console.error("❗ Error uploading file:", error)
-      toast.error(error instanceof Error ? error.message : "Failed to upload file. Please try again.")
+      toast.error(error instanceof Error ? error.message : "Failed to upload files. Please try again.")
       setUploadProgress(0)
     } finally {
       setTimeout(() => setIsSending(false), 1000)
@@ -137,7 +140,7 @@ export default function EmailComposer() {
               </div>
               <div>
                 <Label className="text-base font-semibold text-gray-900">Upload Transaction Report</Label>
-                <p className="text-sm text-gray-500">Upload a file to send via email</p>
+                <p className="text-sm text-gray-500">Upload one or more files to send via email</p>
               </div>
             </div>
 
@@ -145,22 +148,29 @@ export default function EmailComposer() {
             <div
               className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${
                 dragActive ? "border-[#16659e] bg-blue-50/50" : "border-gray-300 hover:border-gray-400"
-              } ${attachment ? "bg-gray-50/50" : "bg-white/50"}`}
+              } ${attachments.length > 0 ? "bg-gray-50/50" : "bg-white/50"}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="*/*" />
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="*/*"
+                multiple
+              />
 
-              {!attachment ? (
+              {attachments.length === 0 ? (
                 <div className="space-y-4">
                   <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto">
                     <Upload className="w-8 h-8 text-gray-400" />
                   </div>
                   <div>
-                    <p className="text-lg font-medium text-gray-900">Drop a file here or click to upload</p>
-                    <p className="text-sm text-gray-500 mt-1">Single file attachment supported</p>
+                    <p className="text-lg font-medium text-gray-900">Drop files here or click to upload</p>
+                    <p className="text-sm text-gray-500 mt-1">Multiple file attachments supported</p>
                   </div>
                   <Button
                     variant="outline"
@@ -168,14 +178,16 @@ export default function EmailComposer() {
                     className="bg-white/70 border-gray-200 hover:bg-gray-50 rounded-xl"
                   >
                     <Paperclip className="w-4 h-4 mr-2" />
-                    Choose File
+                    Choose Files
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-center space-x-2 text-green-600">
                     <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium">File selected</span>
+                    <span className="font-medium">
+                      {attachments.length} {attachments.length === 1 ? "file" : "files"} selected
+                    </span>
                   </div>
                   <Button
                     variant="outline"
@@ -183,34 +195,37 @@ export default function EmailComposer() {
                     className="bg-white/70 border-gray-200 hover:bg-gray-50 rounded-xl"
                   >
                     <Paperclip className="w-4 h-4 mr-2" />
-                    Replace File
+                    Add More Files
                   </Button>
                 </div>
               )}
             </div>
 
-            {/* Attached File Display */}
-            {attachment && (
-              <div className="p-4 bg-white/70 rounded-xl border border-gray-200/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <FileText className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-900">{attachment.name}</p>
-                      <p className="text-sm text-gray-500">{formatFileSize(attachment.size)}</p>
+            {attachments.length > 0 && (
+              <div className="space-y-2">
+                {attachments.map((file, index) => (
+                  <div key={`${file.name}-${index}`} className="p-4 bg-white/70 rounded-xl border border-gray-200/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{file.name}</p>
+                          <p className="text-sm text-gray-500">{formatFileSize(file.size)}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAttachment(index)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={removeAttachment}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
+                ))}
               </div>
             )}
           </div>
@@ -230,7 +245,7 @@ export default function EmailComposer() {
             <Button
               className="w-full h-14 bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#1e7bb8] hover:to-[#16659e] text-white font-semibold rounded-xl shadow-lg shadow-[#16659e]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#16659e]/30 hover:scale-[1.02] text-base"
               onClick={handleUploadEmail}
-              disabled={isSending || !attachment}
+              disabled={isSending || attachments.length === 0}
             >
               {isSending ? (
                 <>
@@ -240,23 +255,24 @@ export default function EmailComposer() {
               ) : (
                 <>
                   <Upload className="mr-3 h-5 w-5" />
-                  Upload File
+                  Upload{" "}
+                  {attachments.length > 0
+                    ? `${attachments.length} ${attachments.length === 1 ? "File" : "Files"}`
+                    : "Files"}
                 </>
               )}
             </Button>
           </div>
 
           {/* Empty State */}
-          {!attachment && (
+          {attachments.length === 0 && (
             <div className="text-center py-12 space-y-4">
               <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto">
                 <AlertCircle className="w-10 h-10 text-gray-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">No File Selected</h3>
-                <p className="text-gray-500 mt-1">
-                  Choose a file from the upload area above to get started
-                </p>
+                <h3 className="text-lg font-semibold text-gray-900">No Files Selected</h3>
+                <p className="text-gray-500 mt-1">Choose one or more files from the upload area above to get started</p>
               </div>
             </div>
           )}

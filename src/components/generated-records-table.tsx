@@ -20,7 +20,7 @@ import {
   Loader2,
   RefreshCw,
   FileSpreadsheet,
-  Eye,
+  Download,
   Send,
   Calendar,
   Mail,
@@ -29,9 +29,14 @@ import {
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react"
-import { getAccessToken } from "@/lib/auth"
 import { toast } from "sonner"
-import type { Merchant } from "@/lib/types/types"
+import { getAccessToken } from "@/lib/auth"
+
+interface Merchant {
+  id: number
+  merchant_name: string
+  recipient_emails: string[]
+}
 
 interface GeneratedRecord {
   generatedAt: string
@@ -56,7 +61,6 @@ export default function GeneratedRecordsTable() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [composeDialogOpen, setComposeDialogOpen] = useState(false)
   const [isSending, setIsSending] = useState(false)
-
   const [page, setPage] = useState(1)
   const [size, setSize] = useState(10)
   const [meta, setMeta] = useState({
@@ -74,7 +78,18 @@ export default function GeneratedRecordsTable() {
   const [merchantName, setMerchantName] = useState<string>("")
   const [subject, setSubject] = useState("Daily Settlements Testing")
 
-  const token = getAccessToken()
+   const token = getAccessToken()
+
+  const getAttachmentUrl = (filename: string) => {
+    return `${process.env.NEXT_PUBLIC_API_URL}/app/reports/generated/${encodeURIComponent(filename)}`
+  }
+
+  // Fixed: Handle both forward slashes and backslashes from API paths (e.g., "generated/filename.xlsx")
+  const getFileName = (path: string) => {
+    // Split on both forward slashes and backslashes to extract just the filename
+    const parts = path.split(/[/\\]/)
+    return parts[parts.length - 1] || path
+  }
 
   const fetchRecords = async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) setIsRefreshing(true)
@@ -82,8 +97,8 @@ export default function GeneratedRecordsTable() {
 
     try {
       const response = await fetch(
-        `http://localhost:3001/settlements/app/emails/generated-records?page=${page}&size=${size}`,
-        {
+        `${process.env.NEXT_PUBLIC_API_URL}/app/emails/generated-records?page=${page}&size=${size}`,
+         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -108,11 +123,13 @@ export default function GeneratedRecordsTable() {
 
   const fetchMerchants = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/merchants`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/merchants`,
+        {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      })
+      }
+      )
 
       if (!response.ok) {
         throw new Error("Failed to fetch merchants")
@@ -149,16 +166,6 @@ export default function GeneratedRecordsTable() {
       hour: "2-digit",
       minute: "2-digit",
     }).format(date)
-  }
-
-  const getFileName = (path: string) => {
-    return path.split("\\").pop() || path
-  }
-
-  const handlePreview = async (record: GeneratedRecord, index: number) => {
-    // In a real implementation, this would download the file
-    toast.info(`Downloading: ${getFileName(record.attachments[index])}`)
-    // You would typically fetch the file and trigger a download here
   }
 
   const openComposeDialog = (record: GeneratedRecord, index: number) => {
@@ -201,7 +208,7 @@ export default function GeneratedRecordsTable() {
         body: "",
       }
 
-      const response = await fetch("http://localhost:3001/settlements/app/emails/generated-records/queue", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/app/emails/generated-records/queue`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -288,29 +295,24 @@ export default function GeneratedRecordsTable() {
   return (
     <>
       <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm !py-0">
-       
-
-         <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                     Generated Records
-                    </CardTitle>
-                    <CardDescription className="text-gray-600">
-                     View and manage generated settlement records
-                    </CardDescription>
-                  </div>
-                  <Button
-                     onClick={handleRefresh}
+        <CardHeader className="border-b border-gray-200/50 bg-gradient-to-r from-blue-50/50 to-cyan-50/50 p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                Generated Records
+              </CardTitle>
+              <CardDescription className="text-gray-600">View and manage generated settlement records</CardDescription>
+            </div>
+            <Button
+              onClick={handleRefresh}
               disabled={isRefreshing}
-                    className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#145182] hover:to-[#16659e] text-white shadow-lg shadow-[#16659e]/25"
-                  >
-                    <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                    Refresh
-                  </Button>
-                </div>
-              </CardHeader>
-
+              className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#145182] hover:to-[#16659e] text-white shadow-lg shadow-[#16659e]/25"
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+        </CardHeader>
         <CardContent className="p-6">
           <div className="overflow-x-auto max-w-[80vw]">
             <Table>
@@ -343,36 +345,35 @@ export default function GeneratedRecordsTable() {
                       <TableCell>
                         <div className="space-y-2">
                           {record.attachments.map((attachment, index) => (
-                            <div
+                            <a
                               key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200/50"
+                              href={getAttachmentUrl(getFileName(attachment))}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200/50 hover:bg-blue-50 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
                             >
                               <div className="flex items-center space-x-3 flex-1 min-w-0">
                                 <FileSpreadsheet className="w-5 h-5 text-green-600 flex-shrink-0" />
-                                <span className="text-sm font-medium text-gray-700 truncate">
+                                <span className="text-sm font-medium text-gray-700 truncate group-hover:text-blue-700">
                                   {getFileName(attachment)}
                                 </span>
+                                <Download className="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                               </div>
                               <div className="flex items-center space-x-2 ml-4">
                                 <Button
                                   size="sm"
-                                  variant="outline"
-                                  onClick={() => handlePreview(record, index)}
-                                  className="bg-white hover:bg-blue-50 border-blue-200 text-blue-700"
-                                >
-                                  <Eye className="w-4 h-4 mr-1" />
-                                  Preview
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => openComposeDialog(record, index)}
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    openComposeDialog(record, index)
+                                  }}
                                   className="bg-gradient-to-r from-[#16659e] to-[#1e7bb8] hover:from-[#1e7bb8] hover:to-[#16659e] text-white"
                                 >
                                   <Send className="w-4 h-4 mr-1" />
                                   Compose
                                 </Button>
                               </div>
-                            </div>
+                            </a>
                           ))}
                         </div>
                       </TableCell>
@@ -515,25 +516,19 @@ export default function GeneratedRecordsTable() {
               <Label htmlFor="merchant" className="text-sm font-medium">
                 Select Merchant
               </Label>
-              <Select value={selectedMerchantId} onValueChange={handleMerchantChange} disabled={isMerchantsLoading}>
-                <SelectTrigger id="merchant" className="h-11">
+              <Select value={selectedMerchantId} onValueChange={handleMerchantChange}>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose a merchant..." />
                 </SelectTrigger>
                 <SelectContent>
                   {isMerchantsLoading ? (
-                    <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2 text-[#16659e]" />
-                      <span className="text-sm text-gray-600">Loading merchants...</span>
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     </div>
                   ) : (
                     merchants.map((merchant) => (
                       <SelectItem key={merchant.id} value={merchant.id.toString()}>
-                        <div className="flex items-center justify-between w-full">
-                          <span>{merchant.merchant_name}</span>
-                          <Badge variant="secondary" className="ml-2">
-                            {merchant.recipient_emails.length} recipients
-                          </Badge>
-                        </div>
+                        {merchant.merchant_name}
                       </SelectItem>
                     ))
                   )}
@@ -541,18 +536,16 @@ export default function GeneratedRecordsTable() {
               </Select>
             </div>
 
-            {/* Recipients Preview */}
+            {/* Recipients Display */}
             {recipients.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Recipients ({recipients.length})</Label>
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200 max-h-32 overflow-y-auto">
-                  <div className="flex flex-wrap gap-2">
-                    {recipients.map((email, index) => (
-                      <Badge key={index} variant="secondary" className="bg-white text-green-800 border-green-300">
-                        {email}
-                      </Badge>
-                    ))}
-                  </div>
+                <Label className="text-sm font-medium">Recipients</Label>
+                <div className="flex flex-wrap gap-2">
+                  {recipients.map((email, index) => (
+                    <Badge key={index} variant="secondary" className="bg-gray-100">
+                      {email}
+                    </Badge>
+                  ))}
                 </div>
               </div>
             )}
@@ -566,14 +559,13 @@ export default function GeneratedRecordsTable() {
                 id="subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="Email subject"
-                className="h-11"
+                placeholder="Email subject..."
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setComposeDialogOpen(false)} disabled={isSending}>
+            <Button variant="outline" onClick={() => setComposeDialogOpen(false)}>
               Cancel
             </Button>
             <Button
@@ -583,12 +575,12 @@ export default function GeneratedRecordsTable() {
             >
               {isSending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Queueing...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="mr-2 h-4 w-4" />
                   Queue Email
                 </>
               )}
