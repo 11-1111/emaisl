@@ -91,6 +91,24 @@ export default function GeneratedRecordsTable() {
     return parts[parts.length - 1] || path
   }
 
+  // D-1 subject helper
+  const getDMinusOne = () => {
+    const d = new Date()
+    d.setDate(d.getDate() - 1) // D-1
+    return d
+  }
+
+  const getDailyStatementSubject = () => {
+    const d = getDMinusOne()
+    const formatted = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(d)
+
+    return `Your Daily Transaction Statement- ${formatted}`
+  }
+
   const fetchRecords = async (showRefreshIndicator = false) => {
     setIsLoading(true)
 
@@ -195,7 +213,7 @@ export default function GeneratedRecordsTable() {
     setSelectedMerchantId("")
     setRecipients([])
     setMerchantName("")
-    setSubject("Daily Settlements Testing")
+    setSubject(getDailyStatementSubject())
     setComposeDialogOpen(true)
   }
 

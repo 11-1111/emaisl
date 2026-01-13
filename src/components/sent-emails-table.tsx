@@ -149,12 +149,23 @@ export default function SentEmailsTable({
     }).format(date)
   }
 
-  const getAttachmentUrl = (attachmentFileName: string | undefined) => {
-    if (!attachmentFileName) return ""
+const getAttachmentUrl = (attachmentPath?: string) => {
+  if (!attachmentPath) return ""
 
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
-    return `${baseUrl}/app/reports/generated/${encodeURIComponent(attachmentFileName)}`
-  }
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+
+
+  if (/^https?:\/\//i.test(attachmentPath)) return attachmentPath
+
+
+  const normalized = attachmentPath.replace(/\\/g, "/").replace(/^\/+/, "")
+
+  const encoded = normalized.split("/").map(encodeURIComponent).join("/")
+
+  return `${baseUrl}/app/reports/${encoded}`
+}
+
+  
 
   const getUserInitials = (user: any) => {
     if (!user) return "U"
